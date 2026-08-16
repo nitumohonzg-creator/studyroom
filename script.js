@@ -8,14 +8,16 @@ const firebaseConfig = {
   appId: "1:772929165730:web:866576fe222456c61fbafb"
 };
 
-// Firebase Initialize karna
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// 2. UI TOGGLE FUNCTION (Login/Signup Screen badalna)
+// Local Storage for Wrong Answers (Revision)
+let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
+updateRevisionCount();
+
 function toggleAuth(type) {
   if(type === 'signup') {
     document.getElementById('loginForm').style.display = 'none';
@@ -26,7 +28,6 @@ function toggleAuth(type) {
   }
 }
 
-// 3. FIREBASE SIGNUP LOGIC
 function signupUser() {
   const name = document.getElementById('signupName').value.trim();
   const email = document.getElementById('signupEmail').value.trim();
@@ -59,7 +60,6 @@ function signupUser() {
     });
 }
 
-// 4. FIREBASE LOGIN LOGIC
 function loginUser() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
@@ -72,11 +72,9 @@ function loginUser() {
   auth.signInWithEmailAndPassword(email, password)
     .then((userCredential) => {
       const user = userCredential.user;
-      
       db.collection('users').doc(user.uid).get().then((doc) => {
         if(doc.exists) {
-          const userName = doc.data().displayName;
-          showDashboard(userName);
+          showDashboard(doc.data().displayName);
         }
       });
     })
@@ -85,31 +83,25 @@ function loginUser() {
     });
 }
 
-// 5. DASHBOARD SHOW KARNA AUR LOGOUT KARNA
 function showDashboard(userName) {
   document.getElementById('loginForm').style.display = 'none';
   document.getElementById('signupForm').style.display = 'none';
   document.getElementById('authBox').style.display = 'none'; 
   document.getElementById('roomViewScreen').style.display = 'none';
+  document.getElementById('revisionScreen').style.display = 'none';
 
   document.getElementById('dashboardScreen').style.display = 'block';
   document.getElementById('welcomeText').innerText = "Welcome, " + userName + "!";
-  
   loadMyRooms();
 }
 
 function logoutUser() {
   auth.signOut().then(() => {
-    document.getElementById('dashboardScreen').style.display = 'none';
-    document.getElementById('roomViewScreen').style.display = 'none';
-    document.getElementById('authBox').style.display = 'block';
+    showDashboard("");
     toggleAuth('login');
-  }).catch((error) => {
-    alert("Error logging out: " + error.message);
   });
 }
 
-// 6. ROOM BANANE KA LOGIC
 function openCreateRoom() {
   document.getElementById('createRoomBox').style.display = 'block';
 }
@@ -128,96 +120,70 @@ function saveRoomToFirebase() {
     return;
   }
 
-  if(!currentUser) {
-    alert("Error: Aap login nahi hain!");
-    return;
-  }
-
   db.collection('users').doc(currentUser.uid).get().then((doc) => {
-    const creatorName = doc.data().displayName;
-
     db.collection('rooms').add({
       roomName: roomName,
       creatorId: currentUser.uid,
-      creatorName: creatorName,
+      creatorName: doc.data().displayName,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       members: [currentUser.uid] 
     })
     .then(() => {
-      alert("Mubarak ho! '" + roomName + "' room successfully ban gaya! 🎉");
+      alert("Room successfully ban gaya! 🎉");
       closeCreateRoom();
       loadMyRooms(); 
-    })
-    .catch((error) => {
-      alert("Room banane me error aayi: " + error.message);
     });
   });
 }
 
-// 7. ROOMS KI LIST FETCH KARNA
 function loadMyRooms() {
   const currentUser = auth.currentUser;
   const container = document.getElementById('roomsListContainer');
-  
   if(!currentUser) return;
 
-  container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading your rooms...</p>';
+  container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading rooms...</p>';
 
   db.collection('rooms').where("creatorId", "==", currentUser.uid).get()
     .then((querySnapshot) => {
       container.innerHTML = '';
-      
       if (querySnapshot.empty) {
-        container.innerHTML = '<p style="color: #666; font-size: 14px;">Abhi tak koi room nahi banaya. Upar "Create Room" par click karein!</p>';
+        container.innerHTML = '<p style="color: #666; font-size: 14px;">Koi room nahi mila.</p>';
         return;
       }
 
       querySnapshot.forEach((doc) => {
         const roomData = doc.data();
-        const roomId = doc.id;
-
-        const roomHtml = `
-          <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        container.innerHTML += `
+          <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div style="text-align: left;">
               <h4 style="margin: 0; color: #1a73e8;">${roomData.roomName}</h4>
               <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Admin: ${roomData.creatorName}</p>
             </div>
-            <button class="btn" style="width: auto; padding: 8px 12px; font-size: 14px; background-color: #1a73e8;" onclick="enterRoom('${roomId}', '${roomData.roomName}')">Enter Room</button>
+            <button class="btn" style="width: auto; padding: 8px 12px; font-size: 14px;" onclick="enterRoom('${doc.id}', '${roomData.roomName}')">Enter Room</button>
           </div>
         `;
-        
-        container.innerHTML += roomHtml;
       });
-    })
-    .catch((error) => {
-      container.innerHTML = '<p style="color: red; font-size: 14px;">Error: ' + error.message + '</p>';
     });
 }
 
-// 8. ROOM KE ANDAR JANE KA LOGIC
 let currentRoomId = null;
 let currentRoomName = null;
 
 function enterRoom(roomId, roomName) {
   currentRoomId = roomId;
   currentRoomName = roomName;
-
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('roomViewScreen').style.display = 'block';
   document.getElementById('roomTitleText').innerText = roomName;
-
   loadRoomQuestions();
 }
 
 function backToDashboard() {
   document.getElementById('roomViewScreen').style.display = 'none';
   document.getElementById('dashboardScreen').style.display = 'block';
-  currentRoomId = null;
-  currentRoomName = null;
   loadMyRooms();
 }
 
-// 9. MCQ QUESTION ADD KARNA
 function openAddQuestionBox() {
   document.getElementById('addQuestionBox').style.display = 'block';
 }
@@ -239,15 +205,9 @@ function saveQuestionToFirebase() {
   const optC = document.getElementById('optC').value.trim();
   const optD = document.getElementById('optD').value.trim();
   const correctOpt = document.getElementById('correctOpt').value.trim().toUpperCase();
-  const currentUser = auth.currentUser;
 
   if(!queText || !optA || !optB || !optC || !optD || !correctOpt) {
     alert("Sare fields bharna zaroori hai!");
-    return;
-  }
-
-  if(correctOpt !== 'A' && correctOpt !== 'B' && correctOpt !== 'C' && correctOpt !== 'D') {
-    alert("Correct answer me sirf A, B, C, ya D likhein!");
     return;
   }
 
@@ -258,19 +218,18 @@ function saveQuestionToFirebase() {
     optionC: optC,
     optionD: optD,
     correct: correctOpt,
-    addedBy: currentUser.uid,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   })
   .then(() => {
-    alert("Question successfully add ho gaya! 🎯");
+    alert("Question add ho gaya! 🎯");
     closeAddQuestionBox();
     loadRoomQuestions();
-  })
-  .catch((error) => {
-    alert("Error saving question: " + error.message);
   });
 }
 
+// ==========================================
+// INTERACTIVE QUIZ & COLOR HIGHLIGHT LOGIC
+// ==========================================
 function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer');
   container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
@@ -278,30 +237,108 @@ function loadRoomQuestions() {
   db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get()
     .then((querySnapshot) => {
       container.innerHTML = '';
-      
       if (querySnapshot.empty) {
-        container.innerHTML = '<p style="color: #666; font-size: 14px;">Is room me abhi koi question nahi hai. "Add MCQ Question" par click karke pehla question banayein!</p>';
+        container.innerHTML = '<p style="color: #666; font-size: 14px;">Abhi koi question nahi hai.</p>';
         return;
       }
 
       let count = 1;
       querySnapshot.forEach((doc) => {
         const q = doc.data();
-        const qHtml = `
-          <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; text-align: left;">
-            <p style="margin: 0 0 8px 0; font-weight: bold; color: #333;">Q${count}. ${q.question}</p>
-            <p style="margin: 4px 0; font-size: 13px; color: #555;">A) ${q.optionA}</p>
-            <p style="margin: 4px 0; font-size: 13px; color: #555;">B) ${q.optionB}</p>
-            <p style="margin: 4px 0; font-size: 13px; color: #555;">C) ${q.optionC}</p>
-            <p style="margin: 4px 0; font-size: 13px; color: #555;">D) ${q.optionD}</p>
-            <p style="margin: 8px 0 0 0; font-size: 12px; color: #1a73e8; font-weight: bold;">Correct Answer: ${q.correct}</p>
+        const qId = doc.id;
+
+        container.innerHTML += `
+          <div id="q-card-${qId}" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; text-align: left;">
+            <p style="margin: 0 0 10px 0; font-weight: bold; color: #333;">Q${count}. ${q.question}</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <button id="btn-${qId}-A" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'A', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">A) ${q.optionA}</button>
+              <button id="btn-${qId}-B" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'B', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">B) ${q.optionB}</button>
+              <button id="btn-${qId}-C" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'C', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">C) ${q.optionC}</button>
+              <button id="btn-${qId}-D" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'D', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">D) ${q.optionD}</button>
+            </div>
+            
+            <p id="feedback-${qId}" style="margin: 10px 0 0 0; font-size: 13px; font-weight: bold; display: none;"></p>
           </div>
         `;
-        container.innerHTML += qHtml;
         count++;
       });
-    })
-    .catch((error) => {
-      container.innerHTML = '<p style="color: red; font-size: 14px;">Error loading questions: ' + error.message + '</p>';
     });
+}
+
+function checkAnswer(qId, selectedOpt, correctOpt) {
+  const btnA = document.getElementById(`btn-${qId}-A`);
+  const btnB = document.getElementById(`btn-${qId}-B`);
+  const btnC = document.getElementById(`btn-${qId}-C`);
+  const btnD = document.getElementById(`btn-${qId}-D`);
+  const feedback = document.getElementById(`feedback-${qId}`);
+
+  // Sabhi buttons disable kar do taaki dobara click na ho sake
+  btnA.disabled = true;
+  btnB.disabled = true;
+  btnC.disabled = true;
+  btnD.disabled = true;
+
+  const clickedBtn = document.getElementById(`btn-${qId}-${selectedOpt}`);
+
+  if (selectedOpt === correctOpt) {
+    clickedBtn.style.background = "#d4edda"; // Light Green
+    clickedBtn.style.borderColor = "#28a745";
+    feedback.innerText = "✅ Sahi Jawab!";
+    feedback.style.color = "#28a745";
+  } else {
+    clickedBtn.style.background = "#f8d7da"; // Light Red
+    clickedBtn.style.borderColor = "#dc3545";
+    
+    // Correct wale ko green kar do taaki user ko pata chale
+    const correctBtn = document.getElementById(`btn-${qId}-${correctOpt}`);
+    correctBtn.style.background = "#d4edda";
+    correctBtn.style.borderColor = "#28a745";
+
+    feedback.innerText = "❌ Galat Jawab! (Revision me save kar liya gaya hai)";
+    feedback.style.color = "#dc3545";
+
+    // Wrong question ko local storage me save karna revision ke liye
+    const cardHtml = document.getElementById(`q-card-${qId}`).innerHTML;
+    if (!wrongQuestions.some(item => item.id === qId)) {
+      wrongQuestions.push({ id: qId, html: cardHtml });
+      localStorage.setItem('studyRoomWrong', JSON.stringify(wrongQuestions));
+      updateRevisionCount();
+    }
+  }
+  feedback.style.display = 'block';
+}
+
+// ==========================================
+// REVISION SYSTEM LOGIC
+// ==========================================
+function openRevisionBox() {
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('revisionScreen').style.display = 'block';
+  
+  const container = document.getElementById('revisionListContainer');
+  container.innerHTML = '';
+
+  if (wrongQuestions.length === 0) {
+    container.innerHTML = '<p style="color: #666; font-size: 14px;">Aapki revision list khali hai! Koi galat jawab nahi diya gaya.</p>';
+    return;
+  }
+
+  wrongQuestions.forEach((item, index) => {
+    container.innerHTML += `
+      <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px; text-align: left;">
+        <p style="margin: 0 0 5px 0; font-size: 12px; color: #dc3545; font-weight: bold;">Revision Item #${index + 1}</p>
+        ${item.html}
+      </div>
+    `;
+  });
+}
+
+function closeRevisionBox() {
+  document.getElementById('revisionScreen').style.display = 'none';
+  document.getElementById('dashboardScreen').style.display = 'block';
+}
+
+function updateRevisionCount() {
+  document.getElementById('revCount').innerText = wrongQuestions.length;
 }
