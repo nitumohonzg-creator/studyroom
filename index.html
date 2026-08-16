@@ -59,6 +59,24 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   
   <!-- JavaScript Link -->
+    <!-- DASHBOARD SCREEN (Login hone ke baad dikhega) -->
+  <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 id="welcomeText" style="margin: 0;">Welcome, User!</h2>
+      <button class="btn" style="width: auto; padding: 8px 16px; background-color: #dc3545;" onclick="logoutUser()">Logout</button>
+    </div>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
+      <h3 style="margin-top: 0;">Group Study Rooms</h3>
+      <p style="color: #666; font-size: 14px;">Naya room banayein ya dosto ke room me judey.</p>
+      
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+        <button class="btn" style="width: auto;" onclick="alert('Room banana agla step hai!')">➕ Create Room</button>
+        <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room agla step hai!')">🤝 Join Room</button>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 
 </body>
