@@ -90,17 +90,18 @@ function showDashboard(userName) {
   document.getElementById('loginForm').style.display = 'none';
   document.getElementById('signupForm').style.display = 'none';
   document.getElementById('authBox').style.display = 'none'; 
+  document.getElementById('roomViewScreen').style.display = 'none';
 
   document.getElementById('dashboardScreen').style.display = 'block';
   document.getElementById('welcomeText').innerText = "Welcome, " + userName + "!";
   
-  // Dashboard khulte hi Rooms load karna
   loadMyRooms();
 }
 
 function logoutUser() {
   auth.signOut().then(() => {
     document.getElementById('dashboardScreen').style.display = 'none';
+    document.getElementById('roomViewScreen').style.display = 'none';
     document.getElementById('authBox').style.display = 'block';
     toggleAuth('login');
   }).catch((error) => {
@@ -145,7 +146,6 @@ function saveRoomToFirebase() {
     .then(() => {
       alert("Mubarak ho! '" + roomName + "' room successfully ban gaya! 🎉");
       closeCreateRoom();
-      // Naya room banne ke turant baad list ko wapas load karo
       loadMyRooms(); 
     })
     .catch((error) => {
@@ -154,7 +154,7 @@ function saveRoomToFirebase() {
   });
 }
 
-// 7. ROOMS KI LIST FETCH KARNA (NAYA FEATURE)
+// 7. ROOMS KI LIST FETCH KARNA
 function loadMyRooms() {
   const currentUser = auth.currentUser;
   const container = document.getElementById('roomsListContainer');
@@ -163,20 +163,18 @@ function loadMyRooms() {
 
   container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading your rooms...</p>';
 
-  // Firebase se wo rooms nikalo jo is user ne banaye hain
   db.collection('rooms').where("creatorId", "==", currentUser.uid).get()
     .then((querySnapshot) => {
-      container.innerHTML = ''; // Loading text hata do
+      container.innerHTML = '';
       
       if (querySnapshot.empty) {
         container.innerHTML = '<p style="color: #666; font-size: 14px;">Abhi tak koi room nahi banaya. Upar "Create Room" par click karein!</p>';
         return;
       }
 
-      // Har ek room ke liye ek chhota sa box banao
       querySnapshot.forEach((doc) => {
         const roomData = doc.data();
-        const roomId = doc.id; // Firebase ka unique ID
+        const roomId = doc.id;
 
         const roomHtml = `
           <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -184,7 +182,7 @@ function loadMyRooms() {
               <h4 style="margin: 0; color: #1a73e8;">${roomData.roomName}</h4>
               <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Admin: ${roomData.creatorName}</p>
             </div>
-            <button class="btn" style="width: auto; padding: 8px 12px; font-size: 14px; background-color: #1a73e8;" onclick="alert('Room ID: ${roomId} me entry ka kaam agle step me hoga!')">Enter Room</button>
+            <button class="btn" style="width: auto; padding: 8px 12px; font-size: 14px; background-color: #1a73e8;" onclick="enterRoom('${roomId}', '${roomData.roomName}')">Enter Room</button>
           </div>
         `;
         
@@ -193,5 +191,117 @@ function loadMyRooms() {
     })
     .catch((error) => {
       container.innerHTML = '<p style="color: red; font-size: 14px;">Error: ' + error.message + '</p>';
+    });
+}
+
+// 8. ROOM KE ANDAR JANE KA LOGIC
+let currentRoomId = null;
+let currentRoomName = null;
+
+function enterRoom(roomId, roomName) {
+  currentRoomId = roomId;
+  currentRoomName = roomName;
+
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('roomViewScreen').style.display = 'block';
+  document.getElementById('roomTitleText').innerText = roomName;
+
+  loadRoomQuestions();
+}
+
+function backToDashboard() {
+  document.getElementById('roomViewScreen').style.display = 'none';
+  document.getElementById('dashboardScreen').style.display = 'block';
+  currentRoomId = null;
+  currentRoomName = null;
+  loadMyRooms();
+}
+
+// 9. MCQ QUESTION ADD KARNA
+function openAddQuestionBox() {
+  document.getElementById('addQuestionBox').style.display = 'block';
+}
+
+function closeAddQuestionBox() {
+  document.getElementById('addQuestionBox').style.display = 'none';
+  document.getElementById('queText').value = '';
+  document.getElementById('optA').value = '';
+  document.getElementById('optB').value = '';
+  document.getElementById('optC').value = '';
+  document.getElementById('optD').value = '';
+  document.getElementById('correctOpt').value = '';
+}
+
+function saveQuestionToFirebase() {
+  const queText = document.getElementById('queText').value.trim();
+  const optA = document.getElementById('optA').value.trim();
+  const optB = document.getElementById('optB').value.trim();
+  const optC = document.getElementById('optC').value.trim();
+  const optD = document.getElementById('optD').value.trim();
+  const correctOpt = document.getElementById('correctOpt').value.trim().toUpperCase();
+  const currentUser = auth.currentUser;
+
+  if(!queText || !optA || !optB || !optC || !optD || !correctOpt) {
+    alert("Sare fields bharna zaroori hai!");
+    return;
+  }
+
+  if(correctOpt !== 'A' && correctOpt !== 'B' && correctOpt !== 'C' && correctOpt !== 'D') {
+    alert("Correct answer me sirf A, B, C, ya D likhein!");
+    return;
+  }
+
+  db.collection('rooms').doc(currentRoomId).collection('questions').add({
+    question: queText,
+    optionA: optA,
+    optionB: optB,
+    optionC: optC,
+    optionD: optD,
+    correct: correctOpt,
+    addedBy: currentUser.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  })
+  .then(() => {
+    alert("Question successfully add ho gaya! 🎯");
+    closeAddQuestionBox();
+    loadRoomQuestions();
+  })
+  .catch((error) => {
+    alert("Error saving question: " + error.message);
+  });
+}
+
+function loadRoomQuestions() {
+  const container = document.getElementById('questionsListContainer');
+  container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
+
+  db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get()
+    .then((querySnapshot) => {
+      container.innerHTML = '';
+      
+      if (querySnapshot.empty) {
+        container.innerHTML = '<p style="color: #666; font-size: 14px;">Is room me abhi koi question nahi hai. "Add MCQ Question" par click karke pehla question banayein!</p>';
+        return;
+      }
+
+      let count = 1;
+      querySnapshot.forEach((doc) => {
+        const q = doc.data();
+        const qHtml = `
+          <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; text-align: left;">
+            <p style="margin: 0 0 8px 0; font-weight: bold; color: #333;">Q${count}. ${q.question}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #555;">A) ${q.optionA}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #555;">B) ${q.optionB}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #555;">C) ${q.optionC}</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #555;">D) ${q.optionD}</p>
+            <p style="margin: 8px 0 0 0; font-size: 12px; color: #1a73e8; font-weight: bold;">Correct Answer: ${q.correct}</p>
+          </div>
+        `;
+        container.innerHTML += qHtml;
+        count++;
+      });
+    })
+    .catch((error) => {
+      container.innerHTML = '<p style="color: red; font-size: 14px;">Error loading questions: ' + error.message + '</p>';
     });
 }
