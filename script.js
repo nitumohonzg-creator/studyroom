@@ -81,12 +81,35 @@ function loginUser() {
       db.collection('users').doc(user.uid).get().then((doc) => {
         if(doc.exists) {
           const userName = doc.data().displayName;
-          alert("Welcome back, " + userName + "! 🚀");
-          // Yahan hum next step me user ko uske "Dashboard" par bhejenge
+          // YAHAN CHANGE KIYA HAI: Alert hata kar direct Dashboard call kar diya
+          showDashboard(userName);
         }
       });
     })
     .catch((error) => {
       alert("Login Failed: " + error.message);
     });
+}
+
+// 5. DASHBOARD SHOW KARNA AUR LOGOUT KARNA
+function showDashboard(userName) {
+  // Login/Signup screen ko chhupa do
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('signupForm').style.display = 'none';
+  document.querySelector('.auth-container').style.display = 'none'; 
+
+  // Dashboard ko dikhao
+  document.getElementById('dashboardScreen').style.display = 'block';
+  document.getElementById('welcomeText').innerText = "Welcome, " + userName + "!";
+}
+
+function logoutUser() {
+  auth.signOut().then(() => {
+    // Logout hone par wapas login screen dikhao
+    document.getElementById('dashboardScreen').style.display = 'none';
+    document.querySelector('.auth-container').style.display = 'block';
+    toggleAuth('login');
+  }).catch((error) => {
+    alert("Error logging out: " + error.message);
+  });
 }
