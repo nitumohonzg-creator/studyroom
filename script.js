@@ -1,4 +1,3 @@
-// 1. FIREBASE CONFIGURATION
 const firebaseConfig = {
   apiKey: "AIzaSyBSpX_DBpJlvGspjzVhAKOBXV-0376P7Ug",
   authDomain: "studyroom-20729.firebaseapp.com",
@@ -14,7 +13,6 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Local Storage for Wrong Answers (Revision)
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 updateRevisionCount();
 
@@ -104,11 +102,22 @@ function logoutUser() {
 
 function openCreateRoom() {
   document.getElementById('createRoomBox').style.display = 'block';
+  document.getElementById('joinRoomBox').style.display = 'none';
 }
 
 function closeCreateRoom() {
   document.getElementById('createRoomBox').style.display = 'none';
   document.getElementById('newRoomName').value = ''; 
+}
+
+function openJoinRoom() {
+  document.getElementById('joinRoomBox').style.display = 'block';
+  document.getElementById('createRoomBox').style.display = 'none';
+}
+
+function closeJoinRoom() {
+  document.getElementById('joinRoomBox').style.display = 'none';
+  document.getElementById('joinRoomIdInput').value = '';
 }
 
 function saveRoomToFirebase() {
@@ -136,6 +145,35 @@ function saveRoomToFirebase() {
   });
 }
 
+function joinRoomByFirebase() {
+  const roomId = document.getElementById('joinRoomIdInput').value.trim();
+  const currentUser = auth.currentUser;
+
+  if(!roomId) {
+    alert("Kripya Room ID dalein!");
+    return;
+  }
+
+  db.collection('rooms').doc(roomId).get().then((doc) => {
+    if(doc.exists) {
+      const roomData = doc.data();
+      let membersList = roomData.members || [];
+      if(!membersList.includes(currentUser.uid)) {
+        membersList.push(currentUser.uid);
+        db.collection('rooms').doc(roomId).update({ members: membersList });
+      }
+
+      alert("Badhai ho! Aapne '" + roomData.roomName + "' room successfully join kar liya hai! 🎉");
+      closeJoinRoom();
+      enterRoom(doc.id, roomData.roomName);
+    } else {
+      alert("Galat Room ID! Aisi koi room maujood nahi hai.");
+    }
+  }).catch((error) => {
+    alert("Error joining room: " + error.message);
+  });
+}
+
 function loadMyRooms() {
   const currentUser = auth.currentUser;
   const container = document.getElementById('roomsListContainer');
@@ -143,7 +181,7 @@ function loadMyRooms() {
 
   container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading rooms...</p>';
 
-  db.collection('rooms').where("creatorId", "==", currentUser.uid).get()
+  db.collection('rooms').where("members", "array-contains", currentUser.uid).get()
     .then((querySnapshot) => {
       container.innerHTML = '';
       if (querySnapshot.empty) {
@@ -157,7 +195,7 @@ function loadMyRooms() {
           <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div style="text-align: left;">
               <h4 style="margin: 0; color: #1a73e8;">${roomData.roomName}</h4>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Admin: ${roomData.creatorName}</p>
+              <p style="margin: 5px 0 0 0; font-size: 11px; color: #555;">Room ID: <span style="background:#eee; padding:2px 4px; border-radius:3px; user-select:all;">${doc.id}</span></p>
             </div>
             <button class="btn" style="width: auto; padding: 8px 12px; font-size: 14px;" onclick="enterRoom('${doc.id}', '${roomData.roomName}')">Enter Room</button>
           </div>
@@ -174,7 +212,7 @@ function enterRoom(roomId, roomName) {
   currentRoomName = roomName;
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('roomViewScreen').style.display = 'block';
-  document.getElementById('roomTitleText').innerText = roomName;
+  document.getElementById('roomTitleText').innerText = roomName + " (ID: " + roomId + ")";
   loadRoomQuestions();
 }
 
@@ -227,9 +265,6 @@ function saveQuestionToFirebase() {
   });
 }
 
-// ==========================================
-// INTERACTIVE QUIZ & COLOR HIGHLIGHT LOGIC
-// ==========================================
 function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer');
   container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
@@ -273,7 +308,6 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   const btnD = document.getElementById(`btn-${qId}-D`);
   const feedback = document.getElementById(`feedback-${qId}`);
 
-  // Sabhi buttons disable kar do taaki dobara click na ho sake
   btnA.disabled = true;
   btnB.disabled = true;
   btnC.disabled = true;
@@ -282,15 +316,14 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   const clickedBtn = document.getElementById(`btn-${qId}-${selectedOpt}`);
 
   if (selectedOpt === correctOpt) {
-    clickedBtn.style.background = "#d4edda"; // Light Green
+    clickedBtn.style.background = "#d4edda";
     clickedBtn.style.borderColor = "#28a745";
     feedback.innerText = "✅ Sahi Jawab!";
     feedback.style.color = "#28a745";
   } else {
-    clickedBtn.style.background = "#f8d7da"; // Light Red
+    clickedBtn.style.background = "#f8d7da";
     clickedBtn.style.borderColor = "#dc3545";
     
-    // Correct wale ko green kar do taaki user ko pata chale
     const correctBtn = document.getElementById(`btn-${qId}-${correctOpt}`);
     correctBtn.style.background = "#d4edda";
     correctBtn.style.borderColor = "#28a745";
@@ -298,7 +331,6 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
     feedback.innerText = "❌ Galat Jawab! (Revision me save kar liya gaya hai)";
     feedback.style.color = "#dc3545";
 
-    // Wrong question ko local storage me save karna revision ke liye
     const cardHtml = document.getElementById(`q-card-${qId}`).innerHTML;
     if (!wrongQuestions.some(item => item.id === qId)) {
       wrongQuestions.push({ id: qId, html: cardHtml });
@@ -309,9 +341,6 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   feedback.style.display = 'block';
 }
 
-// ==========================================
-// REVISION SYSTEM LOGIC
-// ==========================================
 function openRevisionBox() {
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('revisionScreen').style.display = 'block';
