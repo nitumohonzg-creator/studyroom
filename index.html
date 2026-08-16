@@ -4,16 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudyRoom - Quiz & Revision App</title>
-  
-  <!-- CSS Link -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- AUTHENTICATION SCREEN (Login/Signup) -->
+  <!-- AUTHENTICATION SCREEN -->
   <div class="auth-container" id="authBox">
-    
-    <!-- LOGIN FORM -->
     <div id="loginForm">
       <h2>Welcome Back!</h2>
       <div class="input-group">
@@ -30,7 +26,6 @@
       </div>
     </div>
 
-    <!-- SIGNUP FORM -->
     <div id="signupForm" style="display: none;">
       <h2>Create Account</h2>
       <div class="input-group">
@@ -50,12 +45,10 @@
         Already have an account? <span onclick="toggleAuth('login')">Login</span>
       </div>
     </div>
-
   </div>
 
   <!-- DASHBOARD SCREEN -->
   <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px; padding: 20px;">
-    
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 22px;">Welcome, User!</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #dc3545; margin-top: 0; font-size: 14px;" onclick="logoutUser()">Logout</button>
@@ -67,6 +60,7 @@
       
       <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
         <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
+        <button class="btn" style="width: auto; background-color: #28a745;" onclick="openJoinRoom()">🤝 Join Room</button>
         <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision List (<span id="revCount">0</span>)</button>
       </div>
     </div>
@@ -90,11 +84,20 @@
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeCreateRoom()">Cancel</button>
     </div>
 
+    <!-- JOIN ROOM FORM -->
+    <div id="joinRoomBox" style="display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #28a745; margin-top: 20px;">
+      <h3 style="margin-top:0; color: #28a745;">Join an Existing Room</h3>
+      <div class="input-group">
+        <label>Room ID / Code</label>
+        <input type="text" id="joinRoomIdInput" placeholder="Room ki unique ID yahan paste karein">
+      </div>
+      <button class="btn" style="background-color: #28a745;" onclick="joinRoomByFirebase()">Join Room</button>
+      <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeJoinRoom()">Cancel</button>
+    </div>
   </div>
 
-  <!-- ROOM VIEW SCREEN (MCQ Quiz Mode) -->
+  <!-- ROOM VIEW SCREEN -->
   <div class="auth-container" id="roomViewScreen" style="display: none; max-width: 600px; padding: 20px;">
-    
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
@@ -135,17 +138,15 @@
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeAddQuestionBox()">Cancel</button>
     </div>
 
-    <!-- QUESTIONS QUIZ LIST -->
     <div>
       <h3 style="color: #333; margin-bottom: 10px; font-size: 16px;">Practice Quiz</h3>
       <div id="questionsListContainer">
         <p style="color: #888; font-size: 14px;">Loading questions...</p>
       </div>
     </div>
-
   </div>
 
-  <!-- REVISION MODAL SCREEN -->
+  <!-- REVISION SCREEN -->
   <div class="auth-container" id="revisionScreen" style="display: none; max-width: 600px; padding: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; color: #dc3545; font-size: 20px;">📖 Wrong Answer Revision</h2>
@@ -160,7 +161,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  
   <script src="script.js"></script>
 </body>
 </html>
