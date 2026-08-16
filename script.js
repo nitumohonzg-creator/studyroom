@@ -46,7 +46,7 @@ function signupUser() {
         displayName: name,
         email: email,
         totalScore: 0,
-        joinedRooms: [] // Future me room features ke liye
+        joinedRooms: [] 
       });
     })
     .then(() => {
@@ -81,7 +81,6 @@ function loginUser() {
       db.collection('users').doc(user.uid).get().then((doc) => {
         if(doc.exists) {
           const userName = doc.data().displayName;
-          // YAHAN CHANGE KIYA HAI: Alert hata kar direct Dashboard call kar diya
           showDashboard(userName);
         }
       });
@@ -96,7 +95,7 @@ function showDashboard(userName) {
   // Login/Signup screen ko chhupa do
   document.getElementById('loginForm').style.display = 'none';
   document.getElementById('signupForm').style.display = 'none';
-  document.querySelector('.auth-container').style.display = 'none'; 
+  document.getElementById('authBox').style.display = 'none'; 
 
   // Dashboard ko dikhao
   document.getElementById('dashboardScreen').style.display = 'block';
@@ -107,9 +106,58 @@ function logoutUser() {
   auth.signOut().then(() => {
     // Logout hone par wapas login screen dikhao
     document.getElementById('dashboardScreen').style.display = 'none';
-    document.querySelector('.auth-container').style.display = 'block';
+    document.getElementById('authBox').style.display = 'block';
     toggleAuth('login');
   }).catch((error) => {
     alert("Error logging out: " + error.message);
+  });
+}
+
+// 6. ROOM BANANE KA LOGIC (FIREBASE)
+// Room banane wala dabba kholna aur band karna
+function openCreateRoom() {
+  document.getElementById('createRoomBox').style.display = 'block';
+}
+
+function closeCreateRoom() {
+  document.getElementById('createRoomBox').style.display = 'none';
+  document.getElementById('newRoomName').value = ''; // Input khali kar do
+}
+
+// Room ko actually Firebase me save karna
+function saveRoomToFirebase() {
+  const roomName = document.getElementById('newRoomName').value.trim();
+  const currentUser = auth.currentUser;
+
+  if(!roomName) {
+    alert("Room ka naam likhna zaroori hai!");
+    return;
+  }
+
+  if(!currentUser) {
+    alert("Error: Aap login nahi hain!");
+    return;
+  }
+
+  // Pehle user ka Display Name nikalenge, fir room banayenge
+  db.collection('users').doc(currentUser.uid).get().then((doc) => {
+    const creatorName = doc.data().displayName;
+
+    // Firebase 'rooms' collection me naya data save karna
+    db.collection('rooms').add({
+      roomName: roomName,
+      creatorId: currentUser.uid,
+      creatorName: creatorName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      members: [currentUser.uid] // Room banane wala automatically pehla member ban jayega
+    })
+    .then((roomRef) => {
+      // Room banne ke baad ka success message
+      alert("Mubarak ho! '" + roomName + "' room successfully ban gaya! 🎉");
+      closeCreateRoom();
+    })
+    .catch((error) => {
+      alert("Room banane me error aayi: " + error.message);
+    });
   });
 }
