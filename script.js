@@ -225,7 +225,6 @@ function backToDashboard() {
   loadMyRooms();
 }
 
-// Room Members List & Remove Option
 function loadRoomMembers() {
   const container = document.getElementById('membersListContainer');
   container.innerHTML = '<p style="color: #666; font-size: 13px; margin: 0;">Loading members...</p>';
@@ -242,7 +241,6 @@ function loadRoomMembers() {
         const name = uDoc.exists ? uDoc.data().displayName : "Unknown";
         let removeBtn = "";
 
-        // Sirf Room creator ya khud user remove kar sakta hai
         if(creatorId === currentUserId && uid !== currentUserId) {
           removeBtn = `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:2px 6px; border-radius:3px; font-size:11px; cursor:pointer;">Remove</button>`;
         }
@@ -306,6 +304,7 @@ function saveQuestionToFirebase() {
       optionD: optD,
       correct: correctOpt,
       creatorName: creatorName,
+      creatorUid: currentUser.uid,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     })
     .then(() => {
@@ -316,9 +315,12 @@ function saveQuestionToFirebase() {
   });
 }
 
+// Group by Author (Creator Name) with Attempted Questions Filtering
 function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer');
   container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
+
+  let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
 
   db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get()
     .then((querySnapshot) => {
@@ -328,32 +330,73 @@ function loadRoomQuestions() {
         return;
       }
 
-      let count = 1;
+      // Group questions by author name
+      let authorMap = {};
       querySnapshot.forEach((doc) => {
-        const q = doc.data();
-        const qId = doc.id;
-        const author = q.creatorName || "Unknown";
+        let qData = doc.data();
+        let qId = doc.id;
+        
+        // Agar user ne ye question pehle hi sahi attempt kar liya hai, toh skip kar do
+        if(attemptedList.includes(qId)) return;
 
+        let author = qData.creatorName || "Unknown Author";
+        if(!authorMap[author]) {
+          authorMap[author] = [];
+        }
+        authorMap[author].push({ id: qId, ...qData });
+      });
+
+      if(Object.keys(authorMap).length === 0) {
+        container.innerHTML = '<p style="color: #28a745; font-size: 15px; font-weight: bold;">🎉 Badhai ho! Aapne is room ke sabhi questions successfully attempt kar liye hain!</p>';
+        return;
+      }
+
+      // Render author selection list
+      for(let author in authorMap) {
+        let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`;
         container.innerHTML += `
-          <div id="q-card-${qId}" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; text-align: left;">
-            <p style="margin: 0 0 8px 0; font-size: 12px; color: #555; font-weight: bold;">✍️ Created by: ${author}</p>
-            <button id="start-btn-${qId}" class="btn" style="padding: 8px 12px; font-size: 13px; margin: 0 0 10px 0; width: auto;" onclick="startQuiz('${qId}')">Start MCQ Test</button>
-            
-            <div id="mcq-box-${qId}" style="display: none;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; color: #333;">Q${count}. ${q.question}</p>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                <button id="btn-${qId}-A" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'A', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">A) ${q.optionA}</button>
-                <button id="btn-${qId}-B" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'B', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">B) ${q.optionB}</button>
-                <button id="btn-${qId}-C" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'C', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">C) ${q.optionC}</button>
-                <button id="btn-${qId}-D" class="quiz-opt-btn" onclick="checkAnswer('${qId}', 'D', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">D) ${q.optionD}</button>
-              </div>
-              <p id="feedback-${qId}" style="margin: 10px 0 0 0; font-size: 13px; font-weight: bold; display: none;"></p>
+          <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; text-align: left;">
+            <h4 style="margin: 0 0 10px 0; color: #1a73e8; cursor: pointer;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length} Questions) 🔽</h4>
+            <div id="${authorDivId}" style="display: none; margin-top: 10px;">
+              ${renderQuestionsHTML(authorMap[author])}
             </div>
           </div>
         `;
-        count++;
-      });
+      }
     });
+}
+
+function toggleAuthorQuestions(divId) {
+  let el = document.getElementById(divId);
+  if(el.style.display === 'none') {
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function renderQuestionsHTML(questionsArray) {
+  let htmlString = '';
+  questionsArray.forEach((q, index) => {
+    let count = index + 1;
+    htmlString += `
+      <div id="q-card-${q.id}" style="background: #fdfdfd; padding: 12px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px;">
+        <button id="start-btn-${q.id}" class="btn" style="padding: 6px 10px; font-size: 12px; margin: 0 0 8px 0; width: auto;" onclick="startQuiz('${q.id}')">Start MCQ Test</button>
+        
+        <div id="mcq-box-${q.id}" style="display: none;">
+          <p style="margin: 0 0 10px 0; font-weight: bold; color: #333;">Q${count}. ${q.question}</p>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button id="btn-${q.id}-A" class="quiz-opt-btn" onclick="checkAnswer('${q.id}', 'A', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">A) ${q.optionA}</button>
+            <button id="btn-${q.id}-B" class="quiz-opt-btn" onclick="checkAnswer('${q.id}', 'B', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">B) ${q.optionB}</button>
+            <button id="btn-${q.id}-C" class="quiz-opt-btn" onclick="checkAnswer('${q.id}', 'C', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">C) ${q.optionC}</button>
+            <button id="btn-${q.id}-D" class="quiz-opt-btn" onclick="checkAnswer('${q.id}', 'D', '${q.correct}')" style="padding: 8px; text-align: left; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">D) ${q.optionD}</button>
+          </div>
+          <p id="feedback-${q.id}" style="margin: 10px 0 0 0; font-size: 13px; font-weight: bold; display: none;"></p>
+        </div>
+      </div>
+    `;
+  });
+  return htmlString;
 }
 
 function startQuiz(qId) {
@@ -378,8 +421,21 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   if (selectedOpt === correctOpt) {
     clickedBtn.style.background = "#d4edda";
     clickedBtn.style.borderColor = "#28a745";
-    feedback.innerText = "✅ Sahi Jawab!";
+    feedback.innerText = "✅ Sahi Jawab! Question list se hata diya gaya hai.";
     feedback.style.color = "#28a745";
+
+    // Sahi hone par question ko attempted list me daal do taaki wo gayab ho jaye
+    let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
+    if(!attemptedList.includes(qId)) {
+      attemptedList.push(qId);
+      localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(attemptedList));
+    }
+
+    // Kuch der baad section ko refresh kar do taaki agar sab khatam ho toh author button bhi hat jaye
+    setTimeout(() => {
+      loadRoomQuestions();
+    }, 1500);
+
   } else {
     clickedBtn.style.background = "#f8d7da";
     clickedBtn.style.borderColor = "#dc3545";
