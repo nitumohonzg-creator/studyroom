@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyRoom - Login</title>
+  <title>StudyRoom - Dashboard</title>
   
   <!-- CSS Link -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- AUTHENTICATION SCREEN -->
-  <div class="auth-container">
+  <!-- AUTHENTICATION SCREEN (Login/Signup) -->
+  <div class="auth-container" id="authBox">
     
     <!-- LOGIN FORM -->
     <div id="loginForm">
@@ -31,7 +31,7 @@
     </div>
 
     <!-- SIGNUP FORM -->
-    <div id="signupForm">
+    <div id="signupForm" style="display: none;">
       <h2>Create Account</h2>
       <div class="input-group">
         <label>Display Name</label>
@@ -43,11 +43,33 @@
       </div>
       <div class="input-group">
         <label>Password</label>
-        <input type="password" id="signupPassword" placeholder="Create a password (min 6 chars)">
+        <input type="password" id="signupPassword" placeholder="Create a password">
       </div>
       <button class="btn" onclick="signupUser()">Sign Up</button>
       <div class="toggle-text">
         Already have an account? <span onclick="toggleAuth('login')">Login</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DASHBOARD SCREEN (Login hone ke baad dikhega) -->
+  <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px;">
+    
+    <!-- Dashboard Header (Name + Logout) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 22px;">Welcome, User!</h2>
+      <button class="btn" style="width: auto; padding: 8px 16px; background-color: #dc3545; margin-top: 0;" onclick="logoutUser()">Logout</button>
+    </div>
+    
+    <!-- Room Actions -->
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
+      <h3 style="margin-top: 0; color: #333;">Group Study Rooms</h3>
+      <p style="color: #666; font-size: 14px;">Naya room banayein ya dosto ke room me judey.</p>
+      
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+        <button class="btn" style="width: auto;" onclick="alert('Room banana agla step hai!')">➕ Create Room</button>
+        <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room agla step hai!')">🤝 Join Room</button>
       </div>
     </div>
 
@@ -59,24 +81,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   
   <!-- JavaScript Link -->
-    <!-- DASHBOARD SCREEN (Login hone ke baad dikhega) -->
-  <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 id="welcomeText" style="margin: 0;">Welcome, User!</h2>
-      <button class="btn" style="width: auto; padding: 8px 16px; background-color: #dc3545;" onclick="logoutUser()">Logout</button>
-    </div>
-    
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
-      <h3 style="margin-top: 0;">Group Study Rooms</h3>
-      <p style="color: #666; font-size: 14px;">Naya room banayein ya dosto ke room me judey.</p>
-      
-      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-        <button class="btn" style="width: auto;" onclick="alert('Room banana agla step hai!')">➕ Create Room</button>
-        <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room agla step hai!')">🤝 Join Room</button>
-      </div>
-    </div>
-  </div>
-
   <script src="script.js"></script>
 
 </body>
