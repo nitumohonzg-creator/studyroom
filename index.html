@@ -54,12 +54,12 @@
   </div>
 
   <!-- DASHBOARD SCREEN (Login hone ke baad dikhega) -->
-  <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px;">
+  <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px; padding: 20px;">
     
     <!-- Dashboard Header (Name + Logout) -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 22px;">Welcome, User!</h2>
-      <button class="btn" style="width: auto; padding: 8px 16px; background-color: #dc3545; margin-top: 0;" onclick="logoutUser()">Logout</button>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #dc3545; margin-top: 0; font-size: 14px;" onclick="logoutUser()">Logout</button>
     </div>
     
     <!-- Room Actions -->
@@ -70,6 +70,15 @@
       <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
         <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
         <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room aage banayenge!')">🤝 Join Room</button>
+      </div>
+    </div>
+
+    <!-- MY ROOMS LIST (Naya Feature) -->
+    <div style="margin-top: 20px;">
+      <h3 style="color: #333; margin-bottom: 10px;">My Rooms</h3>
+      <div id="roomsListContainer">
+        <!-- Firebase se aane wale rooms yahan dikhenge -->
+        <p style="color: #888; font-size: 14px;">Loading rooms...</p>
       </div>
     </div>
 
