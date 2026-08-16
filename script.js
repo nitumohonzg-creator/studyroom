@@ -1,12 +1,11 @@
 // 1. FIREBASE CONFIGURATION
-// TODO: Apne Firebase Project Settings se config copy karke yahan replace karein
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBSpX_DBpJlvGspjzVhAKOBXV-0376P7Ug",
+  authDomain: "studyroom-20729.firebaseapp.com",
+  projectId: "studyroom-20729",
+  storageBucket: "studyroom-20729.firebasestorage.app",
+  messagingSenderId: "772929165730",
+  appId: "1:772929165730:web:866576fe222456c61fbafb"
 };
 
 // Firebase Initialize karna
