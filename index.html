@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyRoom - Dashboard</title>
+  <title>StudyRoom - Professional App</title>
   
   <!-- CSS Link -->
   <link rel="stylesheet" href="style.css">
@@ -73,11 +73,10 @@
       </div>
     </div>
 
-    <!-- MY ROOMS LIST (Naya Feature) -->
+    <!-- MY ROOMS LIST -->
     <div style="margin-top: 20px;">
       <h3 style="color: #333; margin-bottom: 10px;">My Rooms</h3>
       <div id="roomsListContainer">
-        <!-- Firebase se aane wale rooms yahan dikhenge -->
         <p style="color: #888; font-size: 14px;">Loading rooms...</p>
       </div>
     </div>
@@ -91,6 +90,63 @@
       </div>
       <button class="btn" onclick="saveRoomToFirebase()">Save Room</button>
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeCreateRoom()">Cancel</button>
+    </div>
+
+  </div>
+
+  <!-- ROOM VIEW SCREEN (Room ke andar jaane ke baad dikhega) -->
+  <div class="auth-container" id="roomViewScreen" style="display: none; max-width: 600px; padding: 20px;">
+    
+    <!-- Room Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
+    </div>
+
+    <!-- Add MCQ Button -->
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 20px;">
+      <h3 style="margin-top: 0; color: #333; font-size: 16px;">Contribute Questions</h3>
+      <p style="color: #666; font-size: 13px; margin-bottom: 10px;">Is room ke liye naya MCQ question banayein.</p>
+      <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
+    </div>
+
+    <!-- MCQ FORM (Chhupa hua dabba question banane ke liye) -->
+    <div id="addQuestionBox" style="display: none; background: white; padding: 15px; border-radius: 8px; border: 1px solid #1a73e8; margin-bottom: 20px; text-align: left;">
+      <h4 style="margin-top:0; color: #1a73e8;">New Question</h4>
+      <div class="input-group">
+        <label>Question text</label>
+        <input type="text" id="queText" placeholder="E.g., What is the capital of Assam?">
+      </div>
+      <div class="input-group">
+        <label>Option A</label>
+        <input type="text" id="optA" placeholder="Option A">
+      </div>
+      <div class="input-group">
+        <label>Option B</label>
+        <input type="text" id="optB" placeholder="Option B">
+      </div>
+      <div class="input-group">
+        <label>Option C</label>
+        <input type="text" id="optC" placeholder="Option C">
+      </div>
+      <div class="input-group">
+        <label>Option D</label>
+        <input type="text" id="optD" placeholder="Option D">
+      </div>
+      <div class="input-group">
+        <label>Correct Answer (A, B, C, or D)</label>
+        <input type="text" id="correctOpt" placeholder="E.g., A">
+      </div>
+      <button class="btn" onclick="saveQuestionToFirebase()">Save Question</button>
+      <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeAddQuestionBox()">Cancel</button>
+    </div>
+
+    <!-- QUESTIONS LIST -->
+    <div>
+      <h3 style="color: #333; margin-bottom: 10px; font-size: 16px;">Questions in this Room</h3>
+      <div id="questionsListContainer">
+        <p style="color: #888; font-size: 14px;">Loading questions...</p>
+      </div>
     </div>
 
   </div>
