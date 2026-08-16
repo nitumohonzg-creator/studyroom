@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyRoom - Login</title>
+  
+  <!-- CSS Link -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- AUTHENTICATION SCREEN -->
+  <div class="auth-container">
+    
+    <!-- LOGIN FORM -->
+    <div id="loginForm">
+      <h2>Welcome Back!</h2>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="Enter your email">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password">
+      </div>
+      <button class="btn" onclick="loginUser()">Login</button>
+      <div class="toggle-text">
+        Don't have an account? <span onclick="toggleAuth('signup')">Sign Up</span>
+      </div>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signupForm">
+      <h2>Create Account</h2>
+      <div class="input-group">
+        <label>Display Name</label>
+        <input type="text" id="signupName" placeholder="E.g., ExamWarrior">
+      </div>
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="signupEmail" placeholder="Enter your email">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="Create a password (min 6 chars)">
+      </div>
+      <button class="btn" onclick="signupUser()">Sign Up</button>
+      <div class="toggle-text">
+        Already have an account? <span onclick="toggleAuth('login')">Login</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Google Firebase SDKs (Version 8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  
+  <!-- JavaScript Link -->
+  <script src="script.js"></script>
+
+</body>
+</html>
