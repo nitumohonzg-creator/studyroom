@@ -68,9 +68,20 @@
       <p style="color: #666; font-size: 14px;">Naya room banayein ya dosto ke room me judey.</p>
       
       <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-        <button class="btn" style="width: auto;" onclick="alert('Room banana agla step hai!')">➕ Create Room</button>
-        <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room agla step hai!')">🤝 Join Room</button>
+        <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
+        <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room aage banayenge!')">🤝 Join Room</button>
       </div>
+    </div>
+
+    <!-- CREATE ROOM FORM (Chhupa hua dabba) -->
+    <div id="createRoomBox" style="display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #1a73e8; margin-top: 20px;">
+      <h3 style="margin-top:0; color: #1a73e8;">Create a New Room</h3>
+      <div class="input-group">
+        <label>Room Name</label>
+        <input type="text" id="newRoomName" placeholder="E.g., Assam Police Target 2026">
+      </div>
+      <button class="btn" onclick="saveRoomToFirebase()">Save Room</button>
+      <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeCreateRoom()">Cancel</button>
     </div>
 
   </div>
