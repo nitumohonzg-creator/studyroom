@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyRoom - Professional App</title>
+  <title>StudyRoom - Quiz & Revision App</title>
   
   <!-- CSS Link -->
   <link rel="stylesheet" href="style.css">
@@ -53,23 +53,21 @@
 
   </div>
 
-  <!-- DASHBOARD SCREEN (Login hone ke baad dikhega) -->
+  <!-- DASHBOARD SCREEN -->
   <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px; padding: 20px;">
     
-    <!-- Dashboard Header (Name + Logout) -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 22px;">Welcome, User!</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #dc3545; margin-top: 0; font-size: 14px;" onclick="logoutUser()">Logout</button>
     </div>
     
-    <!-- Room Actions -->
     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
       <h3 style="margin-top: 0; color: #333;">Group Study Rooms</h3>
       <p style="color: #666; font-size: 14px;">Naya room banayein ya dosto ke room me judey.</p>
       
       <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
         <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
-        <button class="btn" style="width: auto; background-color: #28a745;" onclick="alert('Join room aage banayenge!')">🤝 Join Room</button>
+        <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision List (<span id="revCount">0</span>)</button>
       </div>
     </div>
 
@@ -81,7 +79,7 @@
       </div>
     </div>
 
-    <!-- CREATE ROOM FORM (Chhupa hua dabba) -->
+    <!-- CREATE ROOM FORM -->
     <div id="createRoomBox" style="display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #1a73e8; margin-top: 20px;">
       <h3 style="margin-top:0; color: #1a73e8;">Create a New Room</h3>
       <div class="input-group">
@@ -94,28 +92,24 @@
 
   </div>
 
-  <!-- ROOM VIEW SCREEN (Room ke andar jaane ke baad dikhega) -->
+  <!-- ROOM VIEW SCREEN (MCQ Quiz Mode) -->
   <div class="auth-container" id="roomViewScreen" style="display: none; max-width: 600px; padding: 20px;">
     
-    <!-- Room Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
     </div>
 
-    <!-- Add MCQ Button -->
     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 20px;">
-      <h3 style="margin-top: 0; color: #333; font-size: 16px;">Contribute Questions</h3>
-      <p style="color: #666; font-size: 13px; margin-bottom: 10px;">Is room ke liye naya MCQ question banayein.</p>
       <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
     </div>
 
-    <!-- MCQ FORM (Chhupa hua dabba question banane ke liye) -->
+    <!-- ADD QUESTION FORM -->
     <div id="addQuestionBox" style="display: none; background: white; padding: 15px; border-radius: 8px; border: 1px solid #1a73e8; margin-bottom: 20px; text-align: left;">
       <h4 style="margin-top:0; color: #1a73e8;">New Question</h4>
       <div class="input-group">
         <label>Question text</label>
-        <input type="text" id="queText" placeholder="E.g., What is the capital of Assam?">
+        <input type="text" id="queText" placeholder="Question...">
       </div>
       <div class="input-group">
         <label>Option A</label>
@@ -141,9 +135,9 @@
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeAddQuestionBox()">Cancel</button>
     </div>
 
-    <!-- QUESTIONS LIST -->
+    <!-- QUESTIONS QUIZ LIST -->
     <div>
-      <h3 style="color: #333; margin-bottom: 10px; font-size: 16px;">Questions in this Room</h3>
+      <h3 style="color: #333; margin-bottom: 10px; font-size: 16px;">Practice Quiz</h3>
       <div id="questionsListContainer">
         <p style="color: #888; font-size: 14px;">Loading questions...</p>
       </div>
@@ -151,13 +145,22 @@
 
   </div>
 
-  <!-- Google Firebase SDKs (Version 8) -->
+  <!-- REVISION MODAL SCREEN -->
+  <div class="auth-container" id="revisionScreen" style="display: none; max-width: 600px; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0; color: #dc3545; font-size: 20px;">📖 Wrong Answer Revision</h2>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; font-size: 14px;" onclick="closeRevisionBox()">⬅️ Close</button>
+    </div>
+    <div id="revisionListContainer">
+      <p style="color: #888; font-size: 14px;">No wrong answers saved yet!</p>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   
-  <!-- JavaScript Link -->
   <script src="script.js"></script>
-
 </body>
 </html>
