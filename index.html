@@ -107,11 +107,12 @@
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
     </div>
 
-    <!-- NEW CONTROLS: Share, Edit & Leave -->
+    <!-- ROOM CONTROLS -->
     <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #17a2b8; margin: 0;" onclick="copyRoomId()">📋 Copy ID</button>
       <button class="btn" id="editRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ffc107; color: black; margin: 0; display: none;" onclick="openEditRoom()">⚙️ Settings</button>
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #dc3545; margin: 0;" onclick="leaveRoom()">🚪 Leave</button>
+      <button class="btn" id="deleteRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #8b0000; margin: 0; display: none;" onclick="deleteRoom()">🗑️ Delete Room</button>
     </div>
 
     <!-- EDIT ROOM SETTINGS BOX (Only Admins) -->
@@ -137,9 +138,9 @@
       <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
     </div>
 
-    <!-- ADD QUESTION FORM -->
+    <!-- ADD / EDIT QUESTION FORM -->
     <div id="addQuestionBox" style="display: none; background: white; padding: 15px; border-radius: 8px; border: 1px solid #1a73e8; margin-bottom: 20px; text-align: left;">
-      <h4 style="margin-top:0; color: #1a73e8;">New Question</h4>
+      <h4 id="addQuestionBoxTitle" style="margin-top:0; color: #1a73e8;">New Question</h4>
       <div class="input-group">
         <label>Question text</label>
         <input type="text" id="queText" placeholder="Question...">
@@ -168,7 +169,7 @@
         <label>Time Limit (in seconds, Optional)</label>
         <input type="number" id="queTime" placeholder="Leave blank for no timer">
       </div>
-      <button class="btn" onclick="saveQuestionToFirebase()">Save Question</button>
+      <button class="btn" id="saveQuestionBtn" onclick="saveQuestionToFirebase()">Save Question</button>
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeAddQuestionBox()">Cancel</button>
     </div>
 
@@ -198,3 +199,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
