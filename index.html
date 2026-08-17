@@ -54,7 +54,6 @@
   <div class="auth-container" id="dashboardScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 20px;">Welcome, User!</h2>
-      <!-- GAPS ADDED BETWEEN BUTTONS -->
       <div style="display: flex; gap: 10px;">
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #17a2b8; margin-top: 0; font-size: 12px;" onclick="openProfileScreen()">👤 Profile</button>
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #dc3545; margin-top: 0; font-size: 12px;" onclick="logoutUser()">Logout</button>
@@ -177,7 +176,6 @@
         <label>Update Room Name</label>
         <input type="text" id="editRoomNameInput" placeholder="New Room Name">
       </div>
-      <!-- NEW TOGGLE FOR ADMIN ONLY MCQ -->
       <div class="input-group" style="margin-top: 15px;">
         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #856404;">
           <input type="checkbox" id="editRoomAdminOnlyToggle" style="width: auto; cursor: pointer;">
@@ -197,9 +195,17 @@
       </div>
     </div>
 
-    <!-- ADD MCQ BUTTON CONTAINER -->
+    <!-- ADD MCQ BUTTON CONTAINER & BULK UPLOAD -->
     <div id="addMcqBtnContainer" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 20px;">
-      <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
+      <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px; margin-bottom: 10px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
+      
+      <!-- CSV Bulk Upload Box -->
+      <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border: 1px dashed #28a745; text-align: center; margin-top: 10px;">
+        <h4 style="margin-top:0; color: #28a745; font-size: 15px;">📁 Bulk Upload (CSV)</h4>
+        <p style="font-size: 11px; margin: 0 0 10px 0; color: #555;">Format: Question, Option A, Option B, Option C, Option D, Correct Answer (A/B/C/D)<br><i>(Note: Do not use commas inside questions)</i></p>
+        <input type="file" id="csv-file" accept=".csv" style="width: 90%; margin-bottom: 10px; font-size: 12px;">
+        <button class="btn" style="width: auto; padding: 8px 15px; font-size: 12px; background-color: #ff9800; color: #fff;" onclick="uploadCSV()">🚀 Upload 100+ Questions</button>
+      </div>
     </div>
 
     <!-- ADD / EDIT QUESTION FORM -->
@@ -249,7 +255,7 @@
   <div class="auth-container" id="revisionScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: -25px; background: white; padding: 15px 0; z-index: 100; border-bottom: 2px solid #f1f3f4;">
       <h2 style="margin: 0; color: #dc3545; font-size: 20px;">📖 Wrong Answer Revision</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="closeRevisionBox()">⬅️ Close</button>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="closeRevisionBox()">⬅️ Back</button>
     </div>
     <div id="revisionListContainer">
       <p style="color: #888; font-size: 14px;">No wrong answers saved yet!</p>
