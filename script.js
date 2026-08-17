@@ -51,7 +51,12 @@ function signupUser() {
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
       return db.collection('users').doc(userCredential.user.uid).set({
-        displayName: name, email: email, totalScore: 0
+        displayName: name, 
+        email: email, 
+        totalScore: 0,
+        username: "",
+        mobile: "",
+        bio: ""
       });
     })
     .then(() => {
@@ -88,12 +93,109 @@ function logoutUser() {
 }
 
 // -------------------------------
+// USER PROFILE MANAGEMENT
+// -------------------------------
+function openProfileScreen() {
+  const uid = auth.currentUser.uid;
+  db.collection('users').doc(uid).get().then((doc) => {
+    if(doc.exists) {
+      const data = doc.data();
+      document.getElementById('profileName').value = data.displayName || "";
+      document.getElementById('profileUsername').value = data.username || "";
+      document.getElementById('profileMobile').value = data.mobile || "";
+      document.getElementById('profileBio').value = data.bio || "";
+      
+      document.getElementById('dashboardScreen').style.display = 'none';
+      document.getElementById('profileScreen').style.display = 'block';
+    }
+  });
+}
+
+function closeProfileScreen() {
+  document.getElementById('profileScreen').style.display = 'none';
+  document.getElementById('dashboardScreen').style.display = 'block';
+}
+
+function saveProfileData() {
+  const uid = auth.currentUser.uid;
+  const newName = document.getElementById('profileName').value.trim();
+  const newUsername = document.getElementById('profileUsername').value.trim();
+  const newMobile = document.getElementById('profileMobile').value.trim();
+  const newBio = document.getElementById('profileBio').value.trim();
+
+  if(!newName) return alert("Display Name cannot be empty!");
+
+  db.collection('users').doc(uid).update({
+    displayName: newName,
+    username: newUsername,
+    mobile: newMobile,
+    bio: newBio
+  }).then(() => {
+    alert("Profile updated successfully! ✅");
+    document.getElementById('welcomeText').innerText = "Welcome, " + newName + "!";
+    closeProfileScreen();
+  }).catch((error) => alert("Error updating profile: " + error.message));
+}
+
+function sendPasswordResetFromProfile() {
+  const userEmail = auth.currentUser.email;
+  if(confirm("We will send a password reset link to: " + userEmail + ". Do you want to proceed?")) {
+    auth.sendPasswordResetEmail(userEmail)
+      .then(() => alert("Password reset link sent to your email! Check your inbox."))
+      .catch((error) => alert("Error: " + error.message));
+  }
+}
+
+// -------------------------------
+// STATIC PAGES (ABOUT / PRIVACY)
+// -------------------------------
+function openStaticPage(pageType) {
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('staticPageScreen').style.display = 'block';
+  
+  const titleEl = document.getElementById('staticPageTitle');
+  const contentEl = document.getElementById('staticPageContent');
+
+  if(pageType === 'about') {
+    titleEl.innerText = "About Us";
+    contentEl.innerHTML = `
+      <h3>Welcome to StudyRoom Pro</h3>
+      <p>StudyRoom Pro is a dedicated platform designed for students and educators to create, share, and practice MCQs in real-time group environments.</p>
+      <p>Our mission is to make group study more interactive, structured, and accessible for everyone preparing for competitive exams.</p>
+      <p><strong>Features:</strong> Group Rooms, Real-time MCQ practice, Error Revision lists, and Role-based access controls.</p>
+      <p>Happy Learning! 🚀</p>
+    `;
+  } else if(pageType === 'privacy') {
+    titleEl.innerText = "Privacy Policy";
+    contentEl.innerHTML = `
+      <h3>Privacy Policy</h3>
+      <p>Your privacy is critically important to us.</p>
+      <ul>
+        <li><strong>Data Collection:</strong> We only collect the information necessary to provide our service, such as your email, name, and quiz performance data.</li>
+        <li><strong>Data Protection:</strong> Your passwords are encrypted by Firebase Auth. We do not sell your personal data to third parties.</li>
+        <li><strong>Usage:</strong> The data (like MCQs and answers) you submit in public or group rooms is visible to other members of that specific room.</li>
+        <li><strong>Contact:</strong> For any privacy-related concerns, please contact the admin.</li>
+      </ul>
+    `;
+  }
+}
+
+function closeStaticPage() {
+  document.getElementById('staticPageScreen').style.display = 'none';
+  document.getElementById('dashboardScreen').style.display = 'block';
+}
+
+
+// -------------------------------
 // DASHBOARD & ROOM MANAGEMENT
 // -------------------------------
 function showDashboard(userName) {
   document.getElementById('authBox').style.display = 'none'; 
   document.getElementById('roomViewScreen').style.display = 'none';
   document.getElementById('revisionScreen').style.display = 'none';
+  document.getElementById('profileScreen').style.display = 'none';
+  document.getElementById('staticPageScreen').style.display = 'none';
+  
   document.getElementById('dashboardScreen').style.display = 'block';
   document.getElementById('welcomeText').innerText = "Welcome, " + userName + "!";
   loadMyRooms();
@@ -197,10 +299,8 @@ function enterRoom(roomId, roomName) {
   document.getElementById('editRoomBox').style.display = 'none'; 
   closeAddQuestionBox(); 
 
-  // Reset folder states
   openAuthorFolders = [];
 
-  // Fetch Room Permissions
   db.collection('rooms').doc(roomId).get().then(doc => {
     if(doc.exists) {
       currentRoomCreator = doc.data().creatorId;
@@ -392,8 +492,6 @@ function deleteQuestion(qId) {
   if(confirm("Are you sure you want to delete this question?")) {
     db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => {
       alert("Question deleted!");
-      
-      // SMART FIX: Delete hone par list reload mat karo, sirf card hide kar do
       const card = document.getElementById(`q-card-${qId}`);
       if(card) card.style.display = 'none';
     });
@@ -564,7 +662,6 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
       localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(attemptedList));
     }
     
-    // SMART FIX: List reload mat karo, sirf card hide kar do
     setTimeout(() => { 
       const card = document.getElementById(`q-card-${qId}`);
       if(card) card.style.display = 'none'; 
