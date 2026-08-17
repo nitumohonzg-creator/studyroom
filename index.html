@@ -1,278 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyRoom Pro</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parakh - MCQ Study Room</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
-  <!-- AUTHENTICATION SCREEN -->
-  <div class="auth-container" id="authBox">
-    <div id="loginForm">
-      <h2>Welcome Back!</h2>
-      <div class="input-group">
-        <label>Email</label>
-        <input type="email" id="loginEmail" placeholder="Enter your email">
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="Enter password">
-      </div>
-      <button class="btn" onclick="loginUser()">Login</button>
-      <div class="toggle-text" style="margin-top: 10px;">
-        <span onclick="forgotPassword()" style="color: #dc3545; font-size: 13px;">Forgot Password?</span>
-      </div>
-      <div class="toggle-text">
-        Don't have an account? <span onclick="toggleAuth('signup')">Sign Up</span>
-      </div>
+    <!-- LOGIN / SIGNUP SCREEN -->
+    <div id="auth-screen" class="screen">
+        <h2>Welcome to Parakh 📚</h2>
+        <input type="email" id="email" placeholder="Email daalein">
+        <input type="password" id="password" placeholder="Password daalein">
+        <button onclick="loginUser()">Login</button>
+        <button onclick="signupUser()">Sign Up</button>
+        <p id="auth-error" style="color: red;"></p>
     </div>
 
-    <div id="signupForm" style="display: none;">
-      <h2>Create Account</h2>
-      <div class="input-group">
-        <label>Display Name</label>
-        <input type="text" id="signupName" placeholder="E.g., ExamWarrior">
-      </div>
-      <div class="input-group">
-        <label>Email</label>
-        <input type="email" id="signupEmail" placeholder="Enter your email">
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <input type="password" id="signupPassword" placeholder="Create a password">
-      </div>
-      <button class="btn" onclick="signupUser()">Sign Up</button>
-      <div class="toggle-text">
-        Already have an account? <span onclick="toggleAuth('login')">Login</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- DASHBOARD SCREEN -->
-  <div class="auth-container" id="dashboardScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 20px;">Welcome, User!</h2>
-      <!-- GAPS ADDED BETWEEN BUTTONS -->
-      <div style="display: flex; gap: 10px;">
-        <button class="btn" style="width: auto; padding: 6px 10px; background-color: #17a2b8; margin-top: 0; font-size: 12px;" onclick="openProfileScreen()">👤 Profile</button>
-        <button class="btn" style="width: auto; padding: 6px 10px; background-color: #dc3545; margin-top: 0; font-size: 12px;" onclick="logoutUser()">Logout</button>
-      </div>
-    </div>
-    
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
-      <h3 style="margin-top: 0; color: #333;">Group Study Rooms</h3>
-      <p style="color: #666; font-size: 14px;">Create a new room or join your friends' rooms.</p>
-      
-      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-        <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
-        <button class="btn" style="width: auto; background-color: #28a745;" onclick="openJoinRoom()">🤝 Join Room</button>
-        <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision List (<span id="revCount">0</span>)</button>
-      </div>
+    <!-- DASHBOARD SCREEN (Rooms list) -->
+    <div id="dashboard-screen" class="screen" style="display: none;">
+        <h2>Dashboard 🏠</h2>
+        <p>Email: <span id="user-email"></span></p>
+        <button onclick="logoutUser()" style="background: red;">Logout</button>
+        
+        <hr>
+        <h3>Study Rooms</h3>
+        <input type="text" id="room-name" placeholder="Naya Room ka naam">
+        <button onclick="createRoom()">Create Room</button>
+        
+        <div id="rooms-list">
+            <!-- Rooms yahan dikhenge -->
+        </div>
     </div>
 
-    <!-- MY ROOMS LIST -->
-    <div style="margin-top: 20px;">
-      <h3 style="color: #333; margin-bottom: 10px;">My Rooms</h3>
-      <div id="roomsListContainer">
-        <p style="color: #888; font-size: 14px;">Loading rooms...</p>
-      </div>
+    <!-- ROOM SCREEN (MCQs) -->
+    <div id="room-screen" class="screen" style="display: none;">
+        <!-- Mobile back button jaisa kaam karega yeh -->
+        <button onclick="goBackToDashboard()" style="background: #6c757d;">⬅ Back to Dashboard</button>
+        <h2 id="current-room-name">Room Name</h2>
+        
+        <!-- Manual MCQ Add Box -->
+        <div class="add-mcq-box">
+            <h4>Add 1 Question 📝</h4>
+            <input type="text" id="question" placeholder="Question type karein...">
+            <input type="text" id="option1" placeholder="Option 1">
+            <input type="text" id="option2" placeholder="Option 2">
+            <input type="text" id="correct-ans" placeholder="Correct Answer (1 ya 2)">
+            <button onclick="addMCQ()">Add MCQ</button>
+        </div>
+
+        <!-- CSV Bulk Upload Box -->
+        <div class="add-mcq-box" style="background: #e8f5e9; margin-top: 10px;">
+            <h4>Bulk Upload (CSV File) 📁</h4>
+            <p style="font-size: 12px; margin: 0 0 10px 0;">Format: Question, Option1, Option2, Answer<br><i>(Note: Question ya options ke beech mein koi comma ',' mat lagana file banate waqt)</i></p>
+            <input type="file" id="csv-file" accept=".csv">
+            <button onclick="uploadCSV()" style="background-color: #ff9800;">Upload 100+ Questions</button>
+        </div>
+
+        <h3>Room Questions:</h3>
+        <div id="mcq-list">
+            <!-- MCQs yahan dikhenge -->
+        </div>
     </div>
 
-    <!-- CREATE ROOM FORM -->
-    <div id="createRoomBox" style="display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #1a73e8; margin-top: 20px;">
-      <h3 style="margin-top:0; color: #1a73e8;">Create a New Room</h3>
-      <div class="input-group">
-        <label>Room Name</label>
-        <input type="text" id="newRoomName" placeholder="E.g., Assam Police Target 2026">
-      </div>
-      <button class="btn" onclick="saveRoomToFirebase()">Save Room</button>
-      <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeCreateRoom()">Cancel</button>
-    </div>
-
-    <!-- JOIN ROOM FORM -->
-    <div id="joinRoomBox" style="display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #28a745; margin-top: 20px;">
-      <h3 style="margin-top:0; color: #28a745;">Join an Existing Room</h3>
-      <div class="input-group">
-        <label>Room ID / Code</label>
-        <input type="text" id="joinRoomIdInput" placeholder="Paste the unique Room ID here">
-      </div>
-      <button class="btn" style="background-color: #28a745;" onclick="joinRoomByFirebase()">Join Room</button>
-      <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeJoinRoom()">Cancel</button>
-    </div>
-
-    <!-- FOOTER LINKS -->
-    <div style="margin-top: 40px; text-align: center; border-top: 1px solid #ddd; padding-top: 15px;">
-      <p style="font-size: 12px; color: #666;">
-        <span style="color: #1a73e8; cursor: pointer; margin: 0 10px;" onclick="openStaticPage('about')">About Us</span> | 
-        <span style="color: #1a73e8; cursor: pointer; margin: 0 10px;" onclick="openStaticPage('privacy')">Privacy Policy</span>
-      </p>
-      <p style="font-size: 11px; color: #999;">&copy; 2026 StudyRoom Pro. All rights reserved.</p>
-    </div>
-  </div>
-
-  <!-- PROFILE EDIT SCREEN -->
-  <div class="auth-container" id="profileScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px;">
-      <h2 style="margin: 0; color: #1a73e8; font-size: 20px;">👤 Edit Profile</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="closeProfileScreen()">⬅️ Back</button>
-    </div>
-    
-    <div class="input-group">
-      <label>Display Name</label>
-      <input type="text" id="profileName" placeholder="Your Name">
-    </div>
-    <div class="input-group">
-      <label>Username (Unique)</label>
-      <input type="text" id="profileUsername" placeholder="e.g., rahul_123">
-    </div>
-    <div class="input-group">
-      <label>WhatsApp / Mobile No.</label>
-      <input type="number" id="profileMobile" placeholder="Your contact number">
-    </div>
-    <div class="input-group">
-      <label>Short Bio</label>
-      <input type="text" id="profileBio" placeholder="A short description about you">
-    </div>
-    
-    <button class="btn" style="background-color: #28a745;" onclick="saveProfileData()">💾 Save Changes</button>
-    
-    <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed #ccc; text-align: center;">
-      <p style="font-size: 13px; color: #555; margin-bottom: 10px;">Need to update your password?</p>
-      <button class="btn" style="background-color: #ffc107; color: #000; width: auto; padding: 8px 15px; font-size: 13px;" onclick="sendPasswordResetFromProfile()">🔑 Change Password</button>
-    </div>
-  </div>
-
-  <!-- STATIC PAGES SCREEN (About & Privacy) -->
-  <div class="auth-container" id="staticPageScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px;">
-      <h2 id="staticPageTitle" style="margin: 0; color: #333; font-size: 20px;">Title</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="closeStaticPage()">⬅️ Back</button>
-    </div>
-    <div id="staticPageContent" style="font-size: 14px; color: #444; line-height: 1.6; text-align: left;">
-      <!-- Content loads here -->
-    </div>
-  </div>
-
-  <!-- ROOM VIEW SCREEN -->
-  <div class="auth-container" id="roomViewScreen" style="display: none; position: relative;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: sticky; top: -25px; background: white; padding: 15px 0; z-index: 100; border-bottom: 2px solid #f1f3f4;">
-      <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
-    </div>
-    
-    <!-- ROOM CONTROLS -->
-    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #17a2b8; margin: 0;" onclick="copyRoomId()">📋 Copy ID</button>
-      <button class="btn" id="editRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ffc107; color: black; margin: 0; display: none;" onclick="openEditRoom()">⚙️ Settings</button>
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #dc3545; margin: 0;" onclick="leaveRoom()">🚪 Leave</button>
-      <button class="btn" id="deleteRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #8b0000; margin: 0; display: none;" onclick="deleteRoom()">🗑️ Delete Room</button>
-    </div>
-
-    <!-- EDIT ROOM SETTINGS BOX -->
-    <div id="editRoomBox" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffc107; margin-bottom: 20px;">
-      <h4 style="margin-top:0; color: #856404;">Room Settings</h4>
-      <div class="input-group">
-        <label>Update Room Name</label>
-        <input type="text" id="editRoomNameInput" placeholder="New Room Name">
-      </div>
-      <!-- NEW TOGGLE FOR ADMIN ONLY MCQ -->
-      <div class="input-group" style="margin-top: 15px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #856404;">
-          <input type="checkbox" id="editRoomAdminOnlyToggle" style="width: auto; cursor: pointer;">
-          Only Admins can add MCQs
-        </label>
-      </div>
-      <button class="btn" style="background: #28a745;" onclick="saveRoomEdit()">Update Room</button>
-      <button class="btn" style="background: #6c757d; margin-top: 10px;" onclick="closeEditRoom()">Cancel</button>
-    </div>
-
-    <!-- MEMBERS LIST SECTION -->
-    <div style="background: #f1f3f4; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
-      <h4 style="margin: 0 0 8px 0; color: #333; font-size: 15px;">👥 Room Members</h4>
-      <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Click on a name to view profile</p>
-      <div id="membersListContainer">
-        <p style="color: #666; font-size: 13px; margin: 0;">Loading members...</p>
-      </div>
-    </div>
-
-    <!-- ADD MCQ BUTTON CONTAINER -->
-    <div id="addMcqBtnContainer" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 20px;">
-      <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
-    </div>
-
-    <!-- ADD / EDIT QUESTION FORM -->
-    <div id="addQuestionBox" style="display: none; background: white; padding: 15px; border-radius: 8px; border: 1px solid #1a73e8; margin-bottom: 20px; text-align: left;">
-      <h4 id="addQuestionBoxTitle" style="margin-top:0; color: #1a73e8;">New Question</h4>
-      <div class="input-group">
-        <label>Question text</label>
-        <input type="text" id="queText" placeholder="Question...">
-      </div>
-      <div class="input-group">
-        <label>Option A</label>
-        <input type="text" id="optA" placeholder="Option A">
-      </div>
-      <div class="input-group">
-        <label>Option B</label>
-        <input type="text" id="optB" placeholder="Option B">
-      </div>
-      <div class="input-group">
-        <label>Option C</label>
-        <input type="text" id="optC" placeholder="Option C">
-      </div>
-      <div class="input-group">
-        <label>Option D</label>
-        <input type="text" id="optD" placeholder="Option D">
-      </div>
-      <div class="input-group">
-        <label>Correct Answer (A, B, C, or D)</label>
-        <input type="text" id="correctOpt" placeholder="E.g., A">
-      </div>
-      <div class="input-group">
-        <label>Time Limit (in seconds, Optional)</label>
-        <input type="number" id="queTime" placeholder="Leave blank for no timer">
-      </div>
-      <button class="btn" id="saveQuestionBtn" onclick="saveQuestionToFirebase()">Save Question</button>
-      <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeAddQuestionBox()">Cancel</button>
-    </div>
-
-    <div>
-      <h3 style="color: #333; margin-bottom: 10px; font-size: 16px;">Practice Quiz by Authors</h3>
-      <div id="questionsListContainer">
-        <p style="color: #888; font-size: 14px;">Loading questions...</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- REVISION SCREEN -->
-  <div class="auth-container" id="revisionScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: -25px; background: white; padding: 15px 0; z-index: 100; border-bottom: 2px solid #f1f3f4;">
-      <h2 style="margin: 0; color: #dc3545; font-size: 20px;">📖 Wrong Answer Revision</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="closeRevisionBox()">⬅️ Close</button>
-    </div>
-    <div id="revisionListContainer">
-      <p style="color: #888; font-size: 14px;">No wrong answers saved yet!</p>
-    </div>
-  </div>
-
-  <!-- VIEW USER PROFILE MODAL -->
-  <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background: white; padding: 25px; border-radius: 10px; width: 85%; max-width: 400px; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-      <h3 id="viewProfileName" style="margin-top:0; color: #1a73e8; font-size: 22px;">Name</h3>
-      <p style="color: #666; font-size: 14px; margin-bottom: 15px; font-weight: bold;">@<span id="viewProfileUsername">username</span></p>
-      <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
-        <p style="margin: 0; font-size: 14px;"><strong>Bio:</strong> <span id="viewProfileBio" style="color: #555;"></span></p>
-      </div>
-      <button class="btn" style="background: #6c757d; margin-top: 20px;" onclick="closeViewProfile()">Close</button>
-    </div>
-  </div>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
-
