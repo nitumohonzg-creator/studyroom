@@ -14,7 +14,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Auth Persistence Fix (Refresh karne par logout na ho)
+// Auth Persistence Fix
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
@@ -26,7 +26,7 @@ let currentRoomName = null;
 let currentRoomCreator = null;
 let currentRoomAdmins = [];
 let editingQuestionId = null;
-let openAuthorFolders = []; // Jo folders open hain, unko yaad rakhne ke liye
+let openAuthorFolders = []; 
 
 // -------------------------------
 // AUTHENTICATION (LOGIN / SIGNUP)
@@ -197,7 +197,7 @@ function enterRoom(roomId, roomName) {
   document.getElementById('editRoomBox').style.display = 'none'; 
   closeAddQuestionBox(); 
 
-  // Reset open folders list jab naya room khule
+  // Reset folder states
   openAuthorFolders = [];
 
   // Fetch Room Permissions
@@ -224,7 +224,7 @@ function backToDashboard() {
 }
 
 // -------------------------------
-// ROOM SETTINGS (COPY, LEAVE, DELETE, EDIT)
+// ROOM SETTINGS
 // -------------------------------
 function copyRoomId() {
   navigator.clipboard.writeText(currentRoomId).then(() => {
@@ -392,7 +392,10 @@ function deleteQuestion(qId) {
   if(confirm("Are you sure you want to delete this question?")) {
     db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => {
       alert("Question deleted!");
-      loadRoomQuestions();
+      
+      // SMART FIX: Delete hone par list reload mat karo, sirf card hide kar do
+      const card = document.getElementById(`q-card-${qId}`);
+      if(card) card.style.display = 'none';
     });
   }
 }
@@ -455,7 +458,6 @@ function toggleAuthorQuestions(divId) {
 
 function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer');
-  // Avoid flashing "Loading" if we are just refreshing the list silently
   if(container.innerHTML.trim() === '') {
     container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
   }
@@ -489,7 +491,6 @@ function loadRoomQuestions() {
 
       for(let author in authorMap) {
         let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`;
-        // Check karein ki kya yeh folder pehle se open tha
         let isFolderOpen = openAuthorFolders.includes(authorDivId) ? 'block' : 'none';
 
         container.innerHTML += `
@@ -562,7 +563,13 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
       attemptedList.push(qId);
       localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(attemptedList));
     }
-    setTimeout(() => { loadRoomQuestions(); }, 1500);
+    
+    // SMART FIX: List reload mat karo, sirf card hide kar do
+    setTimeout(() => { 
+      const card = document.getElementById(`q-card-${qId}`);
+      if(card) card.style.display = 'none'; 
+    }, 1500);
+    
   } else {
     clickedBtn.style.background = "#f8d7da";
     clickedBtn.style.borderColor = "#dc3545";
