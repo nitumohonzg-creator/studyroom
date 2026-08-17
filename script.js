@@ -12,12 +12,17 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
-
-// Auth Persistence Fix
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 updateRevisionCount();
+
+// GLOBAL ROOM VARIABLES FOR PERMISSIONS
+let currentRoomId = null;
+let currentRoomName = null;
+let currentRoomCreator = null;
+let currentRoomAdmins = [];
+let editingQuestionId = null;
 
 function toggleAuth(type) {
   if(type === 'signup') {
@@ -34,88 +39,54 @@ function signupUser() {
   const email = document.getElementById('signupEmail').value.trim();
   const password = document.getElementById('signupPassword').value.trim();
 
-  if(!name || !email || !password) {
-    alert("All fields are required!");
-    return;
-  }
+  if(!name || !email || !password) return alert("All fields are required!");
 
   auth.createUserWithEmailAndPassword(email, password)
     .then((userCredential) => {
-      const user = userCredential.user;
-      return db.collection('users').doc(user.uid).set({
-        displayName: name,
-        email: email,
-        totalScore: 0,
-        joinedRooms: [] 
+      return db.collection('users').doc(userCredential.user.uid).set({
+        displayName: name, email: email, totalScore: 0
       });
     })
     .then(() => {
       alert("Account successfully created! 🎉");
       toggleAuth('login');
-      document.getElementById('signupName').value = '';
-      document.getElementById('signupEmail').value = '';
-      document.getElementById('signupPassword').value = '';
     })
-    .catch((error) => {
-      alert("Error: " + error.message);
-    });
+    .catch((error) => alert("Error: " + error.message));
 }
 
 function loginUser() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
 
-  if(!email || !password) {
-    alert("Please enter both Email and Password!");
-    return;
-  }
+  if(!email || !password) return alert("Please enter both Email and Password!");
 
   auth.signInWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      const user = userCredential.user;
-      db.collection('users').doc(user.uid).get().then((doc) => {
-        if(doc.exists) {
-          showDashboard(doc.data().displayName);
-        }
+    .then((cred) => {
+      db.collection('users').doc(cred.user.uid).get().then((doc) => {
+        if(doc.exists) showDashboard(doc.data().displayName);
       });
-    })
-    .catch((error) => {
-      alert("Login Failed: " + error.message);
-    });
+    }).catch((error) => alert("Login Failed: " + error.message));
 }
 
-// FORGOT PASSWORD
 function forgotPassword() {
   const email = document.getElementById('loginEmail').value.trim();
-  if(!email) {
-    alert("Please enter your email address in the box first!");
-    return;
-  }
+  if(!email) return alert("Please enter your email address in the box first!");
   auth.sendPasswordResetEmail(email)
-    .then(() => {
-      alert("Password reset link has been sent to your email!");
-    })
-    .catch((error) => {
-      alert("Error: " + error.message);
-    });
+    .then(() => alert("Password reset link has been sent to your email!"))
+    .catch((error) => alert("Error: " + error.message));
 }
 
 function showDashboard(userName) {
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('signupForm').style.display = 'none';
   document.getElementById('authBox').style.display = 'none'; 
   document.getElementById('roomViewScreen').style.display = 'none';
   document.getElementById('revisionScreen').style.display = 'none';
-
   document.getElementById('dashboardScreen').style.display = 'block';
   document.getElementById('welcomeText').innerText = "Welcome, " + userName + "!";
   loadMyRooms();
 }
 
 function logoutUser() {
-  auth.signOut().then(() => {
-    window.location.href = window.location.pathname;
-  });
+  auth.signOut().then(() => { window.location.href = window.location.pathname; });
 }
 
 function openCreateRoom() {
@@ -140,23 +111,18 @@ function closeJoinRoom() {
 
 function saveRoomToFirebase() {
   const roomName = document.getElementById('newRoomName').value.trim();
-  const currentUser = auth.currentUser;
+  const uid = auth.currentUser.uid;
+  if(!roomName) return alert("Room name is required!");
 
-  if(!roomName) {
-    alert("Room name is required!");
-    return;
-  }
-
-  db.collection('users').doc(currentUser.uid).get().then((doc) => {
+  db.collection('users').doc(uid).get().then((doc) => {
     db.collection('rooms').add({
       roomName: roomName,
-      creatorId: currentUser.uid,
+      creatorId: uid,
       creatorName: doc.data().displayName,
-      admins: [currentUser.uid], // Set creator as first admin
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      members: [currentUser.uid] 
-    })
-    .then(() => {
+      admins: [uid], 
+      members: [uid],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
       alert("Room successfully created! 🎉");
       closeCreateRoom();
       loadMyRooms(); 
@@ -166,48 +132,37 @@ function saveRoomToFirebase() {
 
 function joinRoomByFirebase() {
   const roomId = document.getElementById('joinRoomIdInput').value.trim();
-  const currentUser = auth.currentUser;
-
-  if(!roomId) {
-    alert("Please enter a Room ID!");
-    return;
-  }
+  const uid = auth.currentUser.uid;
+  if(!roomId) return alert("Please enter a Room ID!");
 
   db.collection('rooms').doc(roomId).get().then((doc) => {
     if(doc.exists) {
-      const roomData = doc.data();
-      let membersList = roomData.members || [];
-      if(!membersList.includes(currentUser.uid)) {
-        membersList.push(currentUser.uid);
+      let membersList = doc.data().members || [];
+      if(!membersList.includes(uid)) {
+        membersList.push(uid);
         db.collection('rooms').doc(roomId).update({ members: membersList });
       }
-
-      alert("Congratulations! You joined '" + roomData.roomName + "'! 🎉");
+      alert("Congratulations! You joined '" + doc.data().roomName + "'!");
       closeJoinRoom();
-      enterRoom(doc.id, roomData.roomName);
+      enterRoom(doc.id, doc.data().roomName);
     } else {
       alert("Invalid Room ID! Room not found.");
     }
-  }).catch((error) => {
-    alert("Error joining room: " + error.message);
-  });
+  }).catch((error) => alert("Error joining room: " + error.message));
 }
 
 function loadMyRooms() {
-  const currentUser = auth.currentUser;
+  const uid = auth.currentUser.uid;
   const container = document.getElementById('roomsListContainer');
-  if(!currentUser) return;
-
   container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading rooms...</p>';
 
-  db.collection('rooms').where("members", "array-contains", currentUser.uid).get()
+  db.collection('rooms').where("members", "array-contains", uid).get()
     .then((querySnapshot) => {
       container.innerHTML = '';
       if (querySnapshot.empty) {
         container.innerHTML = '<p style="color: #666; font-size: 14px;">No rooms found.</p>';
         return;
       }
-
       querySnapshot.forEach((doc) => {
         const roomData = doc.data();
         container.innerHTML += `
@@ -223,18 +178,30 @@ function loadMyRooms() {
     });
 }
 
-let currentRoomId = null;
-let currentRoomName = null;
-
 function enterRoom(roomId, roomName) {
   currentRoomId = roomId;
   currentRoomName = roomName;
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('roomViewScreen').style.display = 'block';
   document.getElementById('roomTitleText').innerText = roomName;
-  document.getElementById('editRoomBox').style.display = 'none'; // reset edit box
-  loadRoomMembers();
-  loadRoomQuestions();
+  document.getElementById('editRoomBox').style.display = 'none'; 
+  closeAddQuestionBox(); // reset any open form
+
+  // Fetch Room Permissions
+  db.collection('rooms').doc(roomId).get().then(doc => {
+    if(doc.exists) {
+      currentRoomCreator = doc.data().creatorId;
+      currentRoomAdmins = doc.data().admins || [currentRoomCreator];
+      const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
+      const isMeCreator = (auth.currentUser.uid === currentRoomCreator);
+
+      document.getElementById('editRoomBtn').style.display = isMeAdmin ? 'inline-block' : 'none';
+      document.getElementById('deleteRoomBtn').style.display = isMeCreator ? 'inline-block' : 'none';
+
+      loadRoomMembers();
+      loadRoomQuestions();
+    }
+  });
 }
 
 function backToDashboard() {
@@ -243,25 +210,31 @@ function backToDashboard() {
   loadMyRooms();
 }
 
-// -------------------------------
-// NEW CONTROLS: SHARE, LEAVE, EDIT
-// -------------------------------
 function copyRoomId() {
   navigator.clipboard.writeText(currentRoomId).then(() => {
     alert("Room ID Copied: " + currentRoomId);
-  }).catch(err => {
+  }).catch(() => {
     alert("Failed to copy. Room ID is: " + currentRoomId);
   });
 }
 
 function leaveRoom() {
-  const currentUser = auth.currentUser;
+  const uid = auth.currentUser.uid;
   if(confirm("Are you sure you want to leave this room?")) {
     db.collection('rooms').doc(currentRoomId).update({
-      members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
-      admins: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+      members: firebase.firestore.FieldValue.arrayRemove(uid),
+      admins: firebase.firestore.FieldValue.arrayRemove(uid)
     }).then(() => {
       alert("You have left the room.");
+      backToDashboard();
+    });
+  }
+}
+
+function deleteRoom() {
+  if(confirm("DANGER: Are you sure you want to completely delete this room? This cannot be undone!")) {
+    db.collection('rooms').doc(currentRoomId).delete().then(() => {
+      alert("Room has been deleted permanently.");
       backToDashboard();
     });
   }
@@ -272,14 +245,11 @@ function openEditRoom() {
   document.getElementById('editRoomNameInput').value = currentRoomName;
 }
 
-function closeEditRoom() {
-  document.getElementById('editRoomBox').style.display = 'none';
-}
+function closeEditRoom() { document.getElementById('editRoomBox').style.display = 'none'; }
 
 function saveRoomEdit() {
   let newName = document.getElementById('editRoomNameInput').value.trim();
   if(!newName) return alert("Please enter a valid room name");
-  
   db.collection('rooms').doc(currentRoomId).update({ roomName: newName }).then(() => {
     alert("Room settings updated!");
     currentRoomName = newName;
@@ -288,9 +258,6 @@ function saveRoomEdit() {
   });
 }
 
-// -------------------------------
-// ADMIN MANAGEMENT & MEMBERS LIST
-// -------------------------------
 function loadRoomMembers() {
   const container = document.getElementById('membersListContainer');
   container.innerHTML = '<p style="color: #666; font-size: 13px; margin: 0;">Loading members...</p>';
@@ -298,31 +265,32 @@ function loadRoomMembers() {
   db.collection('rooms').doc(currentRoomId).get().then((doc) => {
     if(!doc.exists) return;
     const members = doc.data().members || [];
-    const creatorId = doc.data().creatorId;
-    // Fallback for old rooms that don't have an admins array yet
-    const admins = doc.data().admins || [creatorId]; 
-    const currentUserId = auth.currentUser.uid;
-    const isMeAdmin = admins.includes(currentUserId);
-
-    // Show/Hide "Settings" button based on Admin status
-    document.getElementById('editRoomBtn').style.display = isMeAdmin ? 'inline-block' : 'none';
-
+    currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; // update global array
+    const isMeCreator = (auth.currentUser.uid === doc.data().creatorId);
+    
     container.innerHTML = '';
     members.forEach((uid) => {
       db.collection('users').doc(uid).get().then((uDoc) => {
         const name = uDoc.exists ? uDoc.data().displayName : "Unknown";
-        const isThisUserAdmin = admins.includes(uid);
+        const isThisUserAdmin = currentRoomAdmins.includes(uid);
         
         let actionBtns = "";
 
-        // Current Admin can promote or remove regular members
-        if(isMeAdmin && uid !== currentUserId) {
-          let promoteBtn = isThisUserAdmin ? '' : `<button onclick="makeAdmin('${uid}')" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; margin-right:5px;">Make Admin</button>`;
-          let removeBtn = `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer;">Remove</button>`;
-          actionBtns = promoteBtn + removeBtn;
+        // Only Creator can add/remove other admins. Both Creator/Admins can remove normal members.
+        if (uid !== auth.currentUser.uid) {
+          if (isMeCreator) {
+            let adminBtn = isThisUserAdmin ? 
+              `<button onclick="removeAdminRole('${uid}')" style="background:#ffc107; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; margin-right:5px;">Remove Admin</button>` : 
+              `<button onclick="makeAdmin('${uid}')" style="background:#28a745; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer; margin-right:5px;">Make Admin</button>`;
+            
+            let removeBtn = `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer;">Kick</button>`;
+            actionBtns = adminBtn + removeBtn;
+          } else if (currentRoomAdmins.includes(auth.currentUser.uid) && !isThisUserAdmin) {
+            actionBtns = `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; border-radius:3px; font-size:11px; cursor:pointer;">Kick</button>`;
+          }
         }
 
-        let roleTag = isThisUserAdmin ? '🛡️ Admin' : '👤 Member';
+        let roleTag = (uid === doc.data().creatorId) ? '👑 Creator' : (isThisUserAdmin ? '🛡️ Admin' : '👤 Member');
 
         container.innerHTML += `
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #e2e2e2; font-size: 13px;">
@@ -335,38 +303,37 @@ function loadRoomMembers() {
   });
 }
 
-function makeAdmin(memberUid) {
-  if(confirm("Are you sure you want to make this member an Admin?")) {
-    db.collection('rooms').doc(currentRoomId).update({
-      admins: firebase.firestore.FieldValue.arrayUnion(memberUid)
-    }).then(() => {
-      alert("User promoted to Admin.");
-      loadRoomMembers();
-    });
+function makeAdmin(uid) {
+  if(confirm("Make this member an Admin?")) {
+    db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayUnion(uid) })
+      .then(() => loadRoomMembers());
   }
 }
 
-function removeMember(memberUid) {
-  if(confirm("Are you sure you want to remove this member?")) {
-    db.collection('rooms').doc(currentRoomId).update({
-      members: firebase.firestore.FieldValue.arrayRemove(memberUid),
-      admins: firebase.firestore.FieldValue.arrayRemove(memberUid)
-    }).then(() => {
-      alert("Member has been removed.");
-      loadRoomMembers();
-    });
+function removeAdminRole(uid) {
+  if(confirm("Remove admin rights from this user?")) {
+    db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayRemove(uid) })
+      .then(() => loadRoomMembers());
   }
 }
 
-// -------------------------------
-// MCQ SECTION
-// -------------------------------
+function removeMember(uid) {
+  if(confirm("Kick this member from the room?")) {
+    db.collection('rooms').doc(currentRoomId).update({
+      members: firebase.firestore.FieldValue.arrayRemove(uid),
+      admins: firebase.firestore.FieldValue.arrayRemove(uid)
+    }).then(() => loadRoomMembers());
+  }
+}
+
+// ---------------------------------
+// MCQ SECTION (EDIT & DELETE ADDED)
+// ---------------------------------
 function openAddQuestionBox() {
-  document.getElementById('addQuestionBox').style.display = 'block';
-}
-
-function closeAddQuestionBox() {
-  document.getElementById('addQuestionBox').style.display = 'none';
+  editingQuestionId = null;
+  document.getElementById('addQuestionBoxTitle').innerText = "New Question";
+  document.getElementById('saveQuestionBtn').innerText = "Save Question";
+  
   document.getElementById('queText').value = '';
   document.getElementById('optA').value = '';
   document.getElementById('optB').value = '';
@@ -374,6 +341,43 @@ function closeAddQuestionBox() {
   document.getElementById('optD').value = '';
   document.getElementById('correctOpt').value = '';
   document.getElementById('queTime').value = '';
+  
+  document.getElementById('addQuestionBox').style.display = 'block';
+}
+
+function closeAddQuestionBox() {
+  editingQuestionId = null;
+  document.getElementById('addQuestionBox').style.display = 'none';
+}
+
+function editQuestion(qId) {
+  db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).get().then(doc => {
+    let q = doc.data();
+    document.getElementById('queText').value = q.question;
+    document.getElementById('optA').value = q.optionA;
+    document.getElementById('optB').value = q.optionB;
+    document.getElementById('optC').value = q.optionC;
+    document.getElementById('optD').value = q.optionD;
+    document.getElementById('correctOpt').value = q.correct;
+    document.getElementById('queTime').value = q.timeLimit || '';
+    
+    editingQuestionId = qId;
+    document.getElementById('addQuestionBoxTitle').innerText = "Edit Question";
+    document.getElementById('saveQuestionBtn').innerText = "Update Question";
+    document.getElementById('addQuestionBox').style.display = 'block';
+    
+    // Scroll to top to see the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+function deleteQuestion(qId) {
+  if(confirm("Are you sure you want to delete this question?")) {
+    db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => {
+      alert("Question deleted!");
+      loadRoomQuestions();
+    });
+  }
 }
 
 function saveQuestionToFirebase() {
@@ -384,34 +388,40 @@ function saveQuestionToFirebase() {
   const optD = document.getElementById('optD').value.trim();
   const correctOpt = document.getElementById('correctOpt').value.trim().toUpperCase();
   const queTime = document.getElementById('queTime').value.trim();
-  const currentUser = auth.currentUser;
+  const uid = auth.currentUser.uid;
 
   if(!queText || !optA || !optB || !optC || !optD || !correctOpt) {
-    alert("All fields (except Time Limit) are required!");
-    return;
+    return alert("All fields (except Time Limit) are required!");
   }
 
-  db.collection('users').doc(currentUser.uid).get().then((userDoc) => {
-    const creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown";
+  let qData = {
+    question: queText, optionA: optA, optionB: optB, optionC: optC, optionD: optD,
+    correct: correctOpt, timeLimit: queTime ? queTime : null
+  };
 
-    db.collection('rooms').doc(currentRoomId).collection('questions').add({
-      question: queText,
-      optionA: optA,
-      optionB: optB,
-      optionC: optC,
-      optionD: optD,
-      correct: correctOpt,
-      timeLimit: queTime ? queTime : null,
-      creatorName: creatorName,
-      creatorUid: currentUser.uid,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    })
-    .then(() => {
-      alert("Question successfully added! 🎯");
-      closeAddQuestionBox();
-      loadRoomQuestions();
+  if (editingQuestionId) {
+    // UPDATE EXISTING QUESTION
+    db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData)
+      .then(() => {
+        alert("Question updated successfully! 🎯");
+        closeAddQuestionBox();
+        loadRoomQuestions();
+      });
+  } else {
+    // ADD NEW QUESTION
+    db.collection('users').doc(uid).get().then((userDoc) => {
+      qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown";
+      qData.creatorUid = uid;
+      qData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      
+      db.collection('rooms').doc(currentRoomId).collection('questions').add(qData)
+        .then(() => {
+          alert("Question added successfully! 🎯");
+          closeAddQuestionBox();
+          loadRoomQuestions();
+        });
     });
-  });
+  }
 }
 
 function loadRoomQuestions() {
@@ -436,14 +446,12 @@ function loadRoomQuestions() {
         if(attemptedList.includes(qId)) return;
 
         let author = qData.creatorName || "Unknown Author";
-        if(!authorMap[author]) {
-          authorMap[author] = [];
-        }
+        if(!authorMap[author]) authorMap[author] = [];
         authorMap[author].push({ id: qId, ...qData });
       });
 
       if(Object.keys(authorMap).length === 0) {
-        container.innerHTML = '<p style="color: #28a745; font-size: 15px; font-weight: bold;">🎉 Congratulations! You have successfully attempted all questions in this room!</p>';
+        container.innerHTML = '<p style="color: #28a745; font-size: 15px; font-weight: bold;">🎉 Congratulations! You have successfully attempted all questions!</p>';
         return;
       }
 
@@ -463,22 +471,31 @@ function loadRoomQuestions() {
 
 function toggleAuthorQuestions(divId) {
   let el = document.getElementById(divId);
-  if(el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
+  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
-// IMPROVED UI: REMOVED START BUTTON, QUESTIONS LOAD DIRECTLY
 function renderQuestionsHTML(questionsArray) {
   let htmlString = '';
+  const uid = auth.currentUser.uid;
+  const isMeAdmin = currentRoomAdmins.includes(uid);
+
   questionsArray.forEach((q, index) => {
     let count = index + 1;
     let timeBadge = q.timeLimit ? `<span style="font-size: 11px; background: #ffeeba; color: #856404; padding: 3px 6px; border-radius: 4px; margin-left: 10px;">⏳ ${q.timeLimit}s</span>` : '';
     
+    // Edit/Delete Controls for Author or Admin
+    let controlBtns = '';
+    if (q.creatorUid === uid || isMeAdmin) {
+      controlBtns = `
+        <div style="margin-bottom: 8px; display: flex; gap: 5px;">
+          <button onclick="editQuestion('${q.id}')" style="background: #ffc107; color: black; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">✏️ Edit</button>
+          <button onclick="deleteQuestion('${q.id}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Delete</button>
+        </div>`;
+    }
+
     htmlString += `
       <div id="q-card-${q.id}" style="background: #fdfdfd; padding: 12px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 10px;">
+        ${controlBtns}
         <div id="mcq-box-${q.id}" style="display: block;">
           <p style="margin: 0 0 10px 0; font-weight: bold; color: #333;">Q${count}. ${q.question} ${timeBadge}</p>
           <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -502,17 +519,13 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   const btnD = document.getElementById(`btn-${qId}-D`);
   const feedback = document.getElementById(`feedback-${qId}`);
 
-  btnA.disabled = true;
-  btnB.disabled = true;
-  btnC.disabled = true;
-  btnD.disabled = true;
-
+  btnA.disabled = btnB.disabled = btnC.disabled = btnD.disabled = true;
   const clickedBtn = document.getElementById(`btn-${qId}-${selectedOpt}`);
 
   if (selectedOpt === correctOpt) {
     clickedBtn.style.background = "#d4edda";
     clickedBtn.style.borderColor = "#28a745";
-    feedback.innerText = "✅ Correct Answer! Removed from your pending list.";
+    feedback.innerText = "✅ Correct Answer! Removed from pending list.";
     feedback.style.color = "#28a745";
 
     let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
@@ -520,18 +533,12 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
       attemptedList.push(qId);
       localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(attemptedList));
     }
-
-    setTimeout(() => {
-      loadRoomQuestions();
-    }, 1500);
-
+    setTimeout(() => { loadRoomQuestions(); }, 1500);
   } else {
     clickedBtn.style.background = "#f8d7da";
     clickedBtn.style.borderColor = "#dc3545";
-    
-    const correctBtn = document.getElementById(`btn-${qId}-${correctOpt}`);
-    correctBtn.style.background = "#d4edda";
-    correctBtn.style.borderColor = "#28a745";
+    document.getElementById(`btn-${qId}-${correctOpt}`).style.background = "#d4edda";
+    document.getElementById(`btn-${qId}-${correctOpt}`).style.borderColor = "#28a745";
 
     feedback.innerText = "❌ Wrong Answer! (Saved to Revision)";
     feedback.style.color = "#dc3545";
@@ -549,15 +556,13 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
 function openRevisionBox() {
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('revisionScreen').style.display = 'block';
-  
   const container = document.getElementById('revisionListContainer');
   container.innerHTML = '';
 
   if (wrongQuestions.length === 0) {
-    container.innerHTML = '<p style="color: #666; font-size: 14px;">Your revision list is empty! No incorrect answers recorded.</p>';
+    container.innerHTML = '<p style="color: #666; font-size: 14px;">Your revision list is empty!</p>';
     return;
   }
-
   wrongQuestions.forEach((item, index) => {
     container.innerHTML += `
       <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px; text-align: left;">
@@ -576,4 +581,3 @@ function closeRevisionBox() {
 function updateRevisionCount() {
   document.getElementById('revCount').innerText = wrongQuestions.length;
 }
-
