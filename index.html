@@ -54,7 +54,8 @@
   <div class="auth-container" id="dashboardScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 20px;">Welcome, User!</h2>
-      <div>
+      <!-- GAPS ADDED BETWEEN BUTTONS -->
+      <div style="display: flex; gap: 10px;">
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #17a2b8; margin-top: 0; font-size: 12px;" onclick="openProfileScreen()">👤 Profile</button>
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #dc3545; margin-top: 0; font-size: 12px;" onclick="logoutUser()">Logout</button>
       </div>
@@ -154,7 +155,7 @@
     </div>
   </div>
 
-  <!-- ROOM VIEW SCREEN (Unchanged from previous update) -->
+  <!-- ROOM VIEW SCREEN -->
   <div class="auth-container" id="roomViewScreen" style="display: none; position: relative;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: sticky; top: -25px; background: white; padding: 15px 0; z-index: 100; border-bottom: 2px solid #f1f3f4;">
       <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
@@ -176,6 +177,13 @@
         <label>Update Room Name</label>
         <input type="text" id="editRoomNameInput" placeholder="New Room Name">
       </div>
+      <!-- NEW TOGGLE FOR ADMIN ONLY MCQ -->
+      <div class="input-group" style="margin-top: 15px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #856404;">
+          <input type="checkbox" id="editRoomAdminOnlyToggle" style="width: auto; cursor: pointer;">
+          Only Admins can add MCQs
+        </label>
+      </div>
       <button class="btn" style="background: #28a745;" onclick="saveRoomEdit()">Update Room</button>
       <button class="btn" style="background: #6c757d; margin-top: 10px;" onclick="closeEditRoom()">Cancel</button>
     </div>
@@ -183,12 +191,14 @@
     <!-- MEMBERS LIST SECTION -->
     <div style="background: #f1f3f4; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
       <h4 style="margin: 0 0 8px 0; color: #333; font-size: 15px;">👥 Room Members</h4>
+      <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Click on a name to view profile</p>
       <div id="membersListContainer">
         <p style="color: #666; font-size: 13px; margin: 0;">Loading members...</p>
       </div>
     </div>
 
-    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 20px;">
+    <!-- ADD MCQ BUTTON CONTAINER -->
+    <div id="addMcqBtnContainer" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 20px;">
       <button class="btn" style="width: auto; padding: 10px 20px; font-size: 14px;" onclick="openAddQuestionBox()">➕ Add MCQ Question</button>
     </div>
 
@@ -243,6 +253,18 @@
     </div>
     <div id="revisionListContainer">
       <p style="color: #888; font-size: 14px;">No wrong answers saved yet!</p>
+    </div>
+  </div>
+
+  <!-- VIEW USER PROFILE MODAL -->
+  <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 25px; border-radius: 10px; width: 85%; max-width: 400px; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+      <h3 id="viewProfileName" style="margin-top:0; color: #1a73e8; font-size: 22px;">Name</h3>
+      <p style="color: #666; font-size: 14px; margin-bottom: 15px; font-weight: bold;">@<span id="viewProfileUsername">username</span></p>
+      <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+        <p style="margin: 0; font-size: 14px;"><strong>Bio:</strong> <span id="viewProfileBio" style="color: #555;"></span></p>
+      </div>
+      <button class="btn" style="background: #6c757d; margin-top: 20px;" onclick="closeViewProfile()">Close</button>
     </div>
   </div>
 
