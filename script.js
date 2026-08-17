@@ -25,6 +25,7 @@ let currentRoomId = null;
 let currentRoomName = null;
 let currentRoomCreator = null;
 let currentRoomAdmins = [];
+let currentRoomAdminOnlyMCQ = false; // New global flag
 let editingQuestionId = null;
 let openAuthorFolders = []; 
 
@@ -146,6 +147,23 @@ function sendPasswordResetFromProfile() {
   }
 }
 
+// VIEW ANY USER PROFILE FROM ROOM
+function viewUserProfile(uid) {
+  db.collection('users').doc(uid).get().then(doc => {
+    if(doc.exists) {
+      let data = doc.data();
+      document.getElementById('viewProfileName').innerText = data.displayName || "Unknown User";
+      document.getElementById('viewProfileUsername').innerText = data.username || "no_username";
+      document.getElementById('viewProfileBio').innerText = data.bio || "This user hasn't added a bio yet.";
+      document.getElementById('viewProfileModal').style.display = 'flex';
+    }
+  });
+}
+
+function closeViewProfile() {
+  document.getElementById('viewProfileModal').style.display = 'none';
+}
+
 // -------------------------------
 // STATIC PAGES (ABOUT / PRIVACY)
 // -------------------------------
@@ -233,6 +251,7 @@ function saveRoomToFirebase() {
       creatorName: doc.data().displayName,
       admins: [uid], 
       members: [uid],
+      adminOnlyMCQ: false, // Default false
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
       alert("Room successfully created! 🎉");
@@ -263,6 +282,7 @@ function joinRoomByFirebase() {
   }).catch((error) => alert("Error joining room: " + error.message));
 }
 
+// OPTIMIZED LAG FIX: Load My Rooms
 function loadMyRooms() {
   const uid = auth.currentUser.uid;
   const container = document.getElementById('roomsListContainer');
@@ -270,14 +290,14 @@ function loadMyRooms() {
 
   db.collection('rooms').where("members", "array-contains", uid).get()
     .then((querySnapshot) => {
-      container.innerHTML = '';
       if (querySnapshot.empty) {
         container.innerHTML = '<p style="color: #666; font-size: 14px;">No rooms found.</p>';
         return;
       }
+      let finalHtml = '';
       querySnapshot.forEach((doc) => {
         const roomData = doc.data();
-        container.innerHTML += `
+        finalHtml += `
           <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div style="text-align: left;">
               <h4 style="margin: 0; color: #1a73e8;">${roomData.roomName}</h4>
@@ -287,6 +307,7 @@ function loadMyRooms() {
           </div>
         `;
       });
+      container.innerHTML = finalHtml;
     });
 }
 
@@ -305,11 +326,23 @@ function enterRoom(roomId, roomName) {
     if(doc.exists) {
       currentRoomCreator = doc.data().creatorId;
       currentRoomAdmins = doc.data().admins || [currentRoomCreator];
+      currentRoomAdminOnlyMCQ = doc.data().adminOnlyMCQ || false;
+      
       const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
       const isMeCreator = (auth.currentUser.uid === currentRoomCreator);
 
+      // Setup Settings Toggle
+      document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ;
+
       document.getElementById('editRoomBtn').style.display = isMeAdmin ? 'inline-block' : 'none';
       document.getElementById('deleteRoomBtn').style.display = isMeCreator ? 'inline-block' : 'none';
+
+      // Hide or Show Add MCQ button based on setting
+      if (currentRoomAdminOnlyMCQ && !isMeAdmin) {
+        document.getElementById('addMcqBtnContainer').style.display = 'none';
+      } else {
+        document.getElementById('addMcqBtnContainer').style.display = 'block';
+      }
 
       loadRoomMembers();
       loadRoomQuestions();
@@ -365,17 +398,33 @@ function closeEditRoom() { document.getElementById('editRoomBox').style.display 
 
 function saveRoomEdit() {
   let newName = document.getElementById('editRoomNameInput').value.trim();
+  let adminOnlyToggle = document.getElementById('editRoomAdminOnlyToggle').checked;
+  
   if(!newName) return alert("Please enter a valid room name");
-  db.collection('rooms').doc(currentRoomId).update({ roomName: newName }).then(() => {
+  
+  db.collection('rooms').doc(currentRoomId).update({ 
+    roomName: newName,
+    adminOnlyMCQ: adminOnlyToggle 
+  }).then(() => {
     alert("Room settings updated!");
     currentRoomName = newName;
+    currentRoomAdminOnlyMCQ = adminOnlyToggle;
     document.getElementById('roomTitleText').innerText = newName;
     closeEditRoom();
+    
+    // Dynamically update the Add MCQ button visibility if changed
+    const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
+    if (currentRoomAdminOnlyMCQ && !isMeAdmin) {
+      document.getElementById('addMcqBtnContainer').style.display = 'none';
+    } else {
+      document.getElementById('addMcqBtnContainer').style.display = 'block';
+    }
   });
 }
 
 // -------------------------------
 // ADMIN MANAGEMENT & MEMBERS LIST
+// OPTIMIZED LAG FIX: Promise.all usage
 // -------------------------------
 function loadRoomMembers() {
   const container = document.getElementById('membersListContainer');
@@ -387,9 +436,12 @@ function loadRoomMembers() {
     currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; 
     const isMeCreator = (auth.currentUser.uid === doc.data().creatorId);
     
-    container.innerHTML = '';
-    members.forEach((uid) => {
-      db.collection('users').doc(uid).get().then((uDoc) => {
+    // Fetch all members data at once (Super Fast)
+    Promise.all(members.map(uid => db.collection('users').doc(uid).get())).then((userDocs) => {
+      let finalHtml = '';
+      
+      userDocs.forEach((uDoc, index) => {
+        const uid = members[index];
         const name = uDoc.exists ? uDoc.data().displayName : "Unknown";
         const isThisUserAdmin = currentRoomAdmins.includes(uid);
         
@@ -410,13 +462,15 @@ function loadRoomMembers() {
 
         let roleTag = (uid === doc.data().creatorId) ? '👑 Creator' : (isThisUserAdmin ? '🛡️ Admin' : '👤 Member');
 
-        container.innerHTML += `
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #e2e2e2; font-size: 13px;">
-            <span>${roleTag} - ${name}</span>
+        // Added clickable profile link
+        finalHtml += `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e2e2; font-size: 13px;">
+            <span style="cursor: pointer; color: #1a73e8; font-weight: 500;" onclick="viewUserProfile('${uid}')">${roleTag} - ${name}</span>
             <div>${actionBtns}</div>
           </div>
         `;
       });
+      container.innerHTML = finalHtml;
     });
   });
 }
@@ -542,6 +596,7 @@ function saveQuestionToFirebase() {
 
 // ---------------------------------
 // MCQ DISPLAY & LOGIC
+// OPTIMIZED LAG FIX: finalHtml string building
 // ---------------------------------
 function toggleAuthorQuestions(divId) {
   let el = document.getElementById(divId);
@@ -564,7 +619,6 @@ function loadRoomQuestions() {
 
   db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get()
     .then((querySnapshot) => {
-      container.innerHTML = '';
       if (querySnapshot.empty) {
         container.innerHTML = '<p style="color: #666; font-size: 14px;">No questions available yet.</p>';
         return;
@@ -587,11 +641,12 @@ function loadRoomQuestions() {
         return;
       }
 
+      let finalHtml = '';
       for(let author in authorMap) {
         let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`;
         let isFolderOpen = openAuthorFolders.includes(authorDivId) ? 'block' : 'none';
 
-        container.innerHTML += `
+        finalHtml += `
           <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; text-align: left;">
             <h4 style="margin: 0 0 10px 0; color: #1a73e8; cursor: pointer;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length} Questions) 🔽</h4>
             <div id="${authorDivId}" style="display: ${isFolderOpen}; margin-top: 10px;">
@@ -600,6 +655,7 @@ function loadRoomQuestions() {
           </div>
         `;
       }
+      container.innerHTML = finalHtml;
     });
 }
 
@@ -693,20 +749,22 @@ function openRevisionBox() {
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('revisionScreen').style.display = 'block';
   const container = document.getElementById('revisionListContainer');
-  container.innerHTML = '';
-
+  
   if (wrongQuestions.length === 0) {
     container.innerHTML = '<p style="color: #666; font-size: 14px;">Your revision list is empty!</p>';
     return;
   }
+  
+  let finalHtml = '';
   wrongQuestions.forEach((item, index) => {
-    container.innerHTML += `
+    finalHtml += `
       <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px; text-align: left;">
         <p style="margin: 0 0 5px 0; font-size: 12px; color: #dc3545; font-weight: bold;">Revision Item #${index + 1}</p>
         ${item.html}
       </div>
     `;
   });
+  container.innerHTML = finalHtml;
 }
 
 function closeRevisionBox() {
@@ -717,3 +775,4 @@ function closeRevisionBox() {
 function updateRevisionCount() {
   document.getElementById('revCount').innerText = wrongQuestions.length;
 }
+
