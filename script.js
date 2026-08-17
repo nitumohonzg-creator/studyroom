@@ -1,3 +1,4 @@
+// 1. FIREBASE CONFIGURATION & INITIALIZATION
 const firebaseConfig = {
   apiKey: "AIzaSyBSpX_DBpJlvGspjzVhAKOBXV-0376P7Ug",
   authDomain: "studyroom-20729.firebaseapp.com",
@@ -12,18 +13,24 @@ if (!firebase.apps.length) {
 }
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Auth Persistence Fix (Refresh karne par logout na ho)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 updateRevisionCount();
 
-// GLOBAL ROOM VARIABLES FOR PERMISSIONS
+// GLOBAL VARIABLES FOR ROOMS & FOLDERS
 let currentRoomId = null;
 let currentRoomName = null;
 let currentRoomCreator = null;
 let currentRoomAdmins = [];
 let editingQuestionId = null;
+let openAuthorFolders = []; // Jo folders open hain, unko yaad rakhne ke liye
 
+// -------------------------------
+// AUTHENTICATION (LOGIN / SIGNUP)
+// -------------------------------
 function toggleAuth(type) {
   if(type === 'signup') {
     document.getElementById('loginForm').style.display = 'none';
@@ -76,6 +83,13 @@ function forgotPassword() {
     .catch((error) => alert("Error: " + error.message));
 }
 
+function logoutUser() {
+  auth.signOut().then(() => { window.location.href = window.location.pathname; });
+}
+
+// -------------------------------
+// DASHBOARD & ROOM MANAGEMENT
+// -------------------------------
 function showDashboard(userName) {
   document.getElementById('authBox').style.display = 'none'; 
   document.getElementById('roomViewScreen').style.display = 'none';
@@ -83,10 +97,6 @@ function showDashboard(userName) {
   document.getElementById('dashboardScreen').style.display = 'block';
   document.getElementById('welcomeText').innerText = "Welcome, " + userName + "!";
   loadMyRooms();
-}
-
-function logoutUser() {
-  auth.signOut().then(() => { window.location.href = window.location.pathname; });
 }
 
 function openCreateRoom() {
@@ -185,7 +195,10 @@ function enterRoom(roomId, roomName) {
   document.getElementById('roomViewScreen').style.display = 'block';
   document.getElementById('roomTitleText').innerText = roomName;
   document.getElementById('editRoomBox').style.display = 'none'; 
-  closeAddQuestionBox(); // reset any open form
+  closeAddQuestionBox(); 
+
+  // Reset open folders list jab naya room khule
+  openAuthorFolders = [];
 
   // Fetch Room Permissions
   db.collection('rooms').doc(roomId).get().then(doc => {
@@ -210,6 +223,9 @@ function backToDashboard() {
   loadMyRooms();
 }
 
+// -------------------------------
+// ROOM SETTINGS (COPY, LEAVE, DELETE, EDIT)
+// -------------------------------
 function copyRoomId() {
   navigator.clipboard.writeText(currentRoomId).then(() => {
     alert("Room ID Copied: " + currentRoomId);
@@ -258,6 +274,9 @@ function saveRoomEdit() {
   });
 }
 
+// -------------------------------
+// ADMIN MANAGEMENT & MEMBERS LIST
+// -------------------------------
 function loadRoomMembers() {
   const container = document.getElementById('membersListContainer');
   container.innerHTML = '<p style="color: #666; font-size: 13px; margin: 0;">Loading members...</p>';
@@ -265,7 +284,7 @@ function loadRoomMembers() {
   db.collection('rooms').doc(currentRoomId).get().then((doc) => {
     if(!doc.exists) return;
     const members = doc.data().members || [];
-    currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; // update global array
+    currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; 
     const isMeCreator = (auth.currentUser.uid === doc.data().creatorId);
     
     container.innerHTML = '';
@@ -276,7 +295,6 @@ function loadRoomMembers() {
         
         let actionBtns = "";
 
-        // Only Creator can add/remove other admins. Both Creator/Admins can remove normal members.
         if (uid !== auth.currentUser.uid) {
           if (isMeCreator) {
             let adminBtn = isThisUserAdmin ? 
@@ -327,7 +345,7 @@ function removeMember(uid) {
 }
 
 // ---------------------------------
-// MCQ SECTION (EDIT & DELETE ADDED)
+// MCQ SECTION (ADD, EDIT, DELETE)
 // ---------------------------------
 function openAddQuestionBox() {
   editingQuestionId = null;
@@ -366,7 +384,6 @@ function editQuestion(qId) {
     document.getElementById('saveQuestionBtn').innerText = "Update Question";
     document.getElementById('addQuestionBox').style.display = 'block';
     
-    // Scroll to top to see the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
@@ -400,7 +417,6 @@ function saveQuestionToFirebase() {
   };
 
   if (editingQuestionId) {
-    // UPDATE EXISTING QUESTION
     db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData)
       .then(() => {
         alert("Question updated successfully! 🎯");
@@ -408,7 +424,6 @@ function saveQuestionToFirebase() {
         loadRoomQuestions();
       });
   } else {
-    // ADD NEW QUESTION
     db.collection('users').doc(uid).get().then((userDoc) => {
       qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown";
       qData.creatorUid = uid;
@@ -424,9 +439,26 @@ function saveQuestionToFirebase() {
   }
 }
 
+// ---------------------------------
+// MCQ DISPLAY & LOGIC
+// ---------------------------------
+function toggleAuthorQuestions(divId) {
+  let el = document.getElementById(divId);
+  if(el.style.display === 'none') {
+    el.style.display = 'block';
+    if(!openAuthorFolders.includes(divId)) openAuthorFolders.push(divId);
+  } else {
+    el.style.display = 'none';
+    openAuthorFolders = openAuthorFolders.filter(id => id !== divId);
+  }
+}
+
 function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer');
-  container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
+  // Avoid flashing "Loading" if we are just refreshing the list silently
+  if(container.innerHTML.trim() === '') {
+    container.innerHTML = '<p style="color: #888; font-size: 14px;">Loading questions...</p>';
+  }
 
   let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
 
@@ -457,21 +489,19 @@ function loadRoomQuestions() {
 
       for(let author in authorMap) {
         let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`;
+        // Check karein ki kya yeh folder pehle se open tha
+        let isFolderOpen = openAuthorFolders.includes(authorDivId) ? 'block' : 'none';
+
         container.innerHTML += `
           <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; text-align: left;">
             <h4 style="margin: 0 0 10px 0; color: #1a73e8; cursor: pointer;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length} Questions) 🔽</h4>
-            <div id="${authorDivId}" style="display: none; margin-top: 10px;">
+            <div id="${authorDivId}" style="display: ${isFolderOpen}; margin-top: 10px;">
               ${renderQuestionsHTML(authorMap[author])}
             </div>
           </div>
         `;
       }
     });
-}
-
-function toggleAuthorQuestions(divId) {
-  let el = document.getElementById(divId);
-  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
 function renderQuestionsHTML(questionsArray) {
@@ -483,7 +513,6 @@ function renderQuestionsHTML(questionsArray) {
     let count = index + 1;
     let timeBadge = q.timeLimit ? `<span style="font-size: 11px; background: #ffeeba; color: #856404; padding: 3px 6px; border-radius: 4px; margin-left: 10px;">⏳ ${q.timeLimit}s</span>` : '';
     
-    // Edit/Delete Controls for Author or Admin
     let controlBtns = '';
     if (q.creatorUid === uid || isMeAdmin) {
       controlBtns = `
@@ -553,6 +582,9 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   feedback.style.display = 'block';
 }
 
+// ---------------------------------
+// REVISION SCREEN
+// ---------------------------------
 function openRevisionBox() {
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('revisionScreen').style.display = 'block';
