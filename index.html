@@ -21,6 +21,9 @@
         <input type="password" id="loginPassword" placeholder="Enter password">
       </div>
       <button class="btn" onclick="loginUser()">Login</button>
+      <div class="toggle-text" style="margin-top: 10px;">
+        <span onclick="forgotPassword()" style="color: #dc3545; font-size: 13px;">Forgot Password?</span>
+      </div>
       <div class="toggle-text">
         Don't have an account? <span onclick="toggleAuth('signup')">Sign Up</span>
       </div>
@@ -56,7 +59,7 @@
     
     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ccc; text-align: center;">
       <h3 style="margin-top: 0; color: #333;">Group Study Rooms</h3>
-      <p style="color: #666; font-size: 14px;">Naya room banayein ya dosto ke room me judey.</p>
+      <p style="color: #666; font-size: 14px;">Create a new room or join your friends' rooms.</p>
       
       <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
         <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
@@ -89,7 +92,7 @@
       <h3 style="margin-top:0; color: #28a745;">Join an Existing Room</h3>
       <div class="input-group">
         <label>Room ID / Code</label>
-        <input type="text" id="joinRoomIdInput" placeholder="Room ki unique ID yahan paste karein">
+        <input type="text" id="joinRoomIdInput" placeholder="Paste the unique Room ID here">
       </div>
       <button class="btn" style="background-color: #28a745;" onclick="joinRoomByFirebase()">Join Room</button>
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeJoinRoom()">Cancel</button>
@@ -98,9 +101,28 @@
 
   <!-- ROOM VIEW SCREEN -->
   <div class="auth-container" id="roomViewScreen" style="display: none; max-width: 600px; padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
       <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
+    </div>
+
+    <!-- NEW CONTROLS: Share, Edit & Leave -->
+    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #17a2b8; margin: 0;" onclick="copyRoomId()">📋 Copy ID</button>
+      <button class="btn" id="editRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ffc107; color: black; margin: 0; display: none;" onclick="openEditRoom()">⚙️ Settings</button>
+      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #dc3545; margin: 0;" onclick="leaveRoom()">🚪 Leave</button>
+    </div>
+
+    <!-- EDIT ROOM SETTINGS BOX (Only Admins) -->
+    <div id="editRoomBox" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffc107; margin-bottom: 20px;">
+      <h4 style="margin-top:0; color: #856404;">Room Settings</h4>
+      <div class="input-group">
+        <label>Update Room Name</label>
+        <input type="text" id="editRoomNameInput" placeholder="New Room Name">
+      </div>
+      <button class="btn" style="background: #28a745;" onclick="saveRoomEdit()">Update Room</button>
+      <button class="btn" style="background: #6c757d; margin-top: 10px;" onclick="closeEditRoom()">Cancel</button>
     </div>
 
     <!-- MEMBERS LIST SECTION -->
@@ -141,6 +163,10 @@
       <div class="input-group">
         <label>Correct Answer (A, B, C, or D)</label>
         <input type="text" id="correctOpt" placeholder="E.g., A">
+      </div>
+      <div class="input-group">
+        <label>Time Limit (in seconds, Optional)</label>
+        <input type="number" id="queTime" placeholder="Leave blank for no timer">
       </div>
       <button class="btn" onclick="saveQuestionToFirebase()">Save Question</button>
       <button class="btn" style="background: #666; margin-top: 10px;" onclick="closeAddQuestionBox()">Cancel</button>
