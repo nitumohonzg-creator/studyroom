@@ -51,7 +51,7 @@
   </div>
 
   <!-- DASHBOARD SCREEN -->
-  <div class="auth-container" id="dashboardScreen" style="display: none; max-width: 600px; padding: 20px;">
+  <div class="auth-container" id="dashboardScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 id="welcomeText" style="margin: 0; color: #1a73e8; font-size: 22px;">Welcome, User!</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #dc3545; margin-top: 0; font-size: 14px;" onclick="logoutUser()">Logout</button>
@@ -100,9 +100,10 @@
   </div>
 
   <!-- ROOM VIEW SCREEN -->
-  <div class="auth-container" id="roomViewScreen" style="display: none; max-width: 600px; padding: 20px;">
+  <div class="auth-container" id="roomViewScreen" style="display: none; position: relative;">
     
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <!-- STICKY HEADER (Back button always visible) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: sticky; top: -25px; background: white; padding: 15px 0; z-index: 100; border-bottom: 2px solid #f1f3f4;">
       <h2 id="roomTitleText" style="margin: 0; color: #1a73e8; font-size: 20px;">Room Name</h2>
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="backToDashboard()">⬅️ Back</button>
     </div>
@@ -115,7 +116,7 @@
       <button class="btn" id="deleteRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #8b0000; margin: 0; display: none;" onclick="deleteRoom()">🗑️ Delete Room</button>
     </div>
 
-    <!-- EDIT ROOM SETTINGS BOX (Only Admins) -->
+    <!-- EDIT ROOM SETTINGS BOX -->
     <div id="editRoomBox" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffc107; margin-bottom: 20px;">
       <h4 style="margin-top:0; color: #856404;">Room Settings</h4>
       <div class="input-group">
@@ -182,10 +183,10 @@
   </div>
 
   <!-- REVISION SCREEN -->
-  <div class="auth-container" id="revisionScreen" style="display: none; max-width: 600px; padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <div class="auth-container" id="revisionScreen" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: -25px; background: white; padding: 15px 0; z-index: 100; border-bottom: 2px solid #f1f3f4;">
       <h2 style="margin: 0; color: #dc3545; font-size: 20px;">📖 Wrong Answer Revision</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; font-size: 14px;" onclick="closeRevisionBox()">⬅️ Close</button>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d; margin-top: 0; font-size: 14px;" onclick="closeRevisionBox()">⬅️ Close</button>
     </div>
     <div id="revisionListContainer">
       <p style="color: #888; font-size: 14px;">No wrong answers saved yet!</p>
@@ -199,4 +200,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
