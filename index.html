@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudyRoom Pro</title>
   <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome for Social Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
@@ -68,28 +70,32 @@
       <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
         <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create Room</button>
         <button class="btn" style="width: auto; background-color: #28a745;" onclick="openJoinRoom()">🤝 Join Room</button>
-        <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision List (<span id="revCount">0</span>)</button>
+        <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision (<span id="revCount">0</span>)</button>
+      </div>
+
+      <!-- CREATE & JOIN BOXES (Theek buttons ke niche) -->
+      <div id="createRoomBox" style="display: none; padding: 15px; border: 1px dashed var(--primary-btn); border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
+        <h4 style="color: var(--primary-btn); margin-top:0;">Create a New Room</h4>
+        <input type="text" id="newRoomName" placeholder="Room Name (e.g. Target 2026)" class="styled-input">
+        <div style="display: flex; gap: 10px;">
+          <button class="btn" style="padding: 8px; margin-top: 5px;" onclick="saveRoomToFirebase()">Save</button>
+          <button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeCreateRoom()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="joinRoomBox" style="display: none; padding: 15px; border: 1px dashed #28a745; border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
+        <h4 style="color: #28a745; margin-top:0;">Join an Existing Room</h4>
+        <input type="text" id="joinRoomIdInput" placeholder="Paste Room ID here" class="styled-input">
+        <div style="display: flex; gap: 10px;">
+          <button class="btn" style="padding: 8px; margin-top: 5px; background-color: #28a745;" onclick="joinRoomByFirebase()">Join</button>
+          <button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeJoinRoom()">Cancel</button>
+        </div>
       </div>
     </div>
 
     <div style="margin-top: 20px;">
       <h3>My Rooms</h3>
       <div id="roomsListContainer" style="margin-top:10px;">Loading rooms...</div>
-    </div>
-
-    <!-- CREATE & JOIN BOXES -->
-    <div id="createRoomBox" style="display: none; padding: 20px; border: 1px solid var(--primary-btn); border-radius: 8px; margin-top: 20px;">
-      <h4 style="color: var(--primary-btn); margin-top:0;">Create Room</h4>
-      <input type="text" id="newRoomName" placeholder="Room Name" style="width:100%; padding:10px; border-radius:5px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-color);">
-      <button class="btn" onclick="saveRoomToFirebase()">Save</button>
-      <button class="btn" style="background:#666;" onclick="closeCreateRoom()">Cancel</button>
-    </div>
-
-    <div id="joinRoomBox" style="display: none; padding: 20px; border: 1px solid #28a745; border-radius: 8px; margin-top: 20px;">
-      <h4 style="color: #28a745; margin-top:0;">Join Room</h4>
-      <input type="text" id="joinRoomIdInput" placeholder="Paste Room ID here" style="width:100%; padding:10px; border-radius:5px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-color);">
-      <button class="btn" style="background-color: #28a745;" onclick="joinRoomByFirebase()">Join</button>
-      <button class="btn" style="background:#666;" onclick="closeJoinRoom()">Cancel</button>
     </div>
   </div>
 
@@ -115,17 +121,30 @@
     
     <!-- ROOM CONTROLS -->
     <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #28a745;" onclick="shareInviteLink()">🔗 Share Invite</button>
+      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #28a745;" onclick="openShareModal()">🔗 Share Invite</button>
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #17a2b8;" onclick="copyRoomId()">📋 Copy ID</button>
       <button class="btn" id="editRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ffc107; color: black; display: none;" onclick="openEditRoom()">⚙️ Settings</button>
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #dc3545;" onclick="leaveRoom()">🚪 Leave</button>
       <button class="btn" id="deleteRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #8b0000; display: none;" onclick="deleteRoom()">🗑️ Delete</button>
     </div>
 
+    <!-- SHARE MODAL -->
+    <div id="shareModal" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); margin-bottom: 20px; text-align: center;">
+      <h4 style="margin-top: 0; margin-bottom: 15px;">Share Invite Link</h4>
+      <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
+        <button onclick="shareViaWhatsApp()" style="background:#25D366; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>
+        <button onclick="shareViaFacebook()" style="background:#1877F2; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-facebook-f"></i></button>
+        <button onclick="shareViaTwitter()" style="background:#1DA1F2; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-twitter"></i></button>
+        <button onclick="copyInviteLink()" style="background:#6c757d; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fas fa-copy"></i></button>
+      </div>
+      <input type="text" id="shareLinkInput" readonly class="styled-input" style="text-align: center; font-size: 12px;">
+      <button class="btn" style="padding: 6px; margin-top: 5px; background: #dc3545;" onclick="closeShareModal()">Close</button>
+    </div>
+
     <!-- SETTINGS BOX -->
     <div id="editRoomBox" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid #ffc107; margin-bottom: 20px;">
       <h4>Room Settings</h4>
-      <input type="text" id="editRoomNameInput" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);">
+      <input type="text" id="editRoomNameInput" class="styled-input" style="margin-top: 10px;">
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="editRoomAdminOnlyToggle"> Admins only MCQ</label>
       <button class="btn" style="background:#28a745;" onclick="saveRoomEdit()">Update</button>
       <button class="btn" style="background:#666;" onclick="closeEditRoom()">Cancel</button>
@@ -144,19 +163,26 @@
 
     <!-- ADD MCQ BUTTONS (CSV & MANUAL) -->
     <div id="addMcqBtnContainer" style="padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 20px;">
-      <button class="btn" style="width: auto; padding: 10px 20px; margin-bottom: 10px;" onclick="openAddQuestionBox()">➕ Add MCQ</button>
+      <button class="btn" style="width: auto; padding: 10px 20px; margin-bottom: 10px;" onclick="openAddQuestionBox()">➕ Add MCQ Manually</button>
       
-      <!-- CSV Upload -->
-      <div style="padding: 15px; border: 1px dashed #28a745; border-radius: 8px; margin-top: 10px;">
-        <h4 style="color:#28a745;">📁 Bulk Upload (CSV)</h4>
-        <input type="file" id="csv-file" accept=".csv" style="width:90%; margin-top:10px; background: var(--input-bg); color: var(--text-color);">
-        <button class="btn" style="background-color: #ff9800; padding:8px 15px;" onclick="uploadCSV()">🚀 Upload</button>
+      <!-- CSV Upload (Format & Guide) -->
+      <div style="padding: 15px; border: 1px dashed #28a745; border-radius: 8px; margin-top: 10px; text-align: center; background: var(--bg-color);">
+        <h4 style="color:#28a745; margin-bottom: 10px;">📁 Bulk Upload (CSV)</h4>
+        
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 11px;">
+          <p style="margin:0 0 5px 0; color:var(--text-color);"><b>CSV Format (6 Columns Required):</b></p>
+          <code style="background:var(--bg-color); padding:4px; border-radius:4px; display:block; margin-bottom:5px; color:#d63384;">Question, Option A, Option B, Option C, Option D, Correct (A/B/C/D)</code>
+          <p style="margin:0; color:#888;">* Do not use commas (,) inside your questions or options.</p>
+        </div>
+
+        <input type="file" id="csv-file" accept=".csv" style="width:100%; margin-top:5px; padding: 8px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
+        <button class="btn" style="background-color: #ff9800; padding:8px 15px; margin-top: 10px;" onclick="uploadCSV()">🚀 Upload Questions</button>
       </div>
     </div>
 
     <!-- MANUAL ADD BOX -->
     <div id="addQuestionBox" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid var(--primary-btn); margin-bottom: 20px;">
-      <h4 id="addQuestionBoxTitle" style="color: var(--primary-btn);">New Question</h4>
+      <h4 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-bottom: 10px;">New Question</h4>
       <input type="text" id="queTopic" placeholder="Topic (e.g. History)" class="styled-input">
       <input type="text" id="queText" placeholder="Question text" class="styled-input">
       <input type="text" id="optA" placeholder="Option A" class="styled-input">
@@ -166,7 +192,7 @@
       <input type="text" id="correctOpt" placeholder="Correct Answer (A/B/C/D)" class="styled-input">
       <input type="number" id="queTime" placeholder="Time limit (Optional)" class="styled-input">
       <button class="btn" id="saveQuestionBtn" onclick="saveQuestionToFirebase()">Save Question</button>
-      <button class="btn" style="background:#666;" onclick="closeAddQuestionBox()">Cancel</button>
+      <button class="btn" style="background:#6c757d;" onclick="closeAddQuestionBox()">Cancel</button>
     </div>
 
     <!-- QUESTIONS LIST -->
@@ -188,12 +214,12 @@
   <!-- VIEW PROFILE MODAL -->
   <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
-      <h3 id="viewProfileName" style="color: var(--primary-btn);">Name</h3>
+      <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
       <p style="font-weight: bold;">@<span id="viewProfileUsername">username</span></p>
-      <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px;">
-        <p><strong>Bio:</strong> <span id="viewProfileBio"></span></p>
+      <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px; background: var(--bg-color);">
+        <p style="margin:0;"><strong>Bio:</strong> <span id="viewProfileBio"></span></p>
       </div>
-      <button class="btn" style="background: #6c757d;" onclick="closeViewProfile()">Close</button>
+      <button class="btn" style="background: #6c757d; margin-top: 15px;" onclick="closeViewProfile()">Close</button>
     </div>
   </div>
 
@@ -208,3 +234,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
