@@ -306,4 +306,3 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   }
   feedback.style.display = 'block';
 }
-
