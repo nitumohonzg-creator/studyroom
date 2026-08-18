@@ -23,6 +23,7 @@ let editingQuestionId = null;
 let openAuthorFolders = []; 
 let allCurrentQuestions = [];
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
+
 updateRevisionCount();
 
 // -------------------------------
@@ -92,6 +93,41 @@ auth.onAuthStateChanged((user) => {
     });
   } else { window.location.hash = ''; handleHashChange(); }
 });
+
+// -------------------------------
+// 🔗 SOCIAL SHARING MODAL LOGIC
+// -------------------------------
+function openShareModal() {
+  const link = window.location.origin + window.location.pathname + '#join=' + currentRoomId;
+  document.getElementById('shareLinkInput').value = link;
+  document.getElementById('shareModal').style.display = 'block';
+}
+
+function closeShareModal() {
+  document.getElementById('shareModal').style.display = 'none';
+}
+
+function copyInviteLink() {
+  const link = document.getElementById('shareLinkInput').value;
+  navigator.clipboard.writeText(link).then(() => alert("🔗 Link Copied!"));
+}
+
+function shareViaWhatsApp() {
+  const link = document.getElementById('shareLinkInput').value;
+  const text = `Join my Study Room on StudyRoom Pro to practice MCQs together! 📚\nClick here: ${link}`;
+  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function shareViaFacebook() {
+  const link = document.getElementById('shareLinkInput').value;
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`, '_blank');
+}
+
+function shareViaTwitter() {
+  const link = document.getElementById('shareLinkInput').value;
+  const text = `Join my Study Room to practice MCQs! 📚`;
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`, '_blank');
+}
 
 // -------------------------------
 // AUTHENTICATION & PROFILE
@@ -168,7 +204,6 @@ function closeCreateRoom() { document.getElementById('createRoomBox').style.disp
 function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; }
 function closeJoinRoom() { document.getElementById('joinRoomBox').style.display = 'none'; }
 function backToDashboard() { window.location.hash = '#dashboard'; }
-function shareInviteLink() { navigator.clipboard.writeText(window.location.origin + window.location.pathname + '#join=' + currentRoomId).then(() => alert("🔗 Invite Link Copied!")); }
 function copyRoomId() { navigator.clipboard.writeText(currentRoomId).then(() => alert("ID Copied!")); }
 
 function saveRoomToFirebase() {
@@ -200,7 +235,7 @@ function loadMyRooms() {
     let html = '';
     snap.forEach(doc => {
       html += `<div class="q-card" style="display:flex; justify-content:space-between; align-items:center;">
-                 <div><b>${doc.data().roomName}</b><p style="font-size:11px; margin:0;">ID: ${doc.id}</p></div>
+                 <div><b>${doc.data().roomName}</b><p style="font-size:11px; margin:0;">ID: <span style="background:#ddd; padding:2px 4px; border-radius:3px; color:#000;">${doc.id}</span></p></div>
                  <button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button>
                </div>`;
     });
@@ -212,6 +247,7 @@ function enterRoom(roomId, roomName) {
   currentRoomId = roomId; currentRoomName = roomName;
   document.getElementById('roomTitleText').innerText = roomName;
   document.getElementById('editRoomBox').style.display = 'none';
+  document.getElementById('shareModal').style.display = 'none';
   document.getElementById('searchQuestion').value = ''; 
   closeAddQuestionBox(); openAuthorFolders = [];
 
@@ -261,9 +297,12 @@ function loadRoomMembers() {
     const members = doc.data().members || []; currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; 
     const isMeCreator = (auth.currentUser.uid === doc.data().creatorId);
     
-    Promise.all(members.map(uid => db.collection('users').doc(uid).get())).then(userDocs => {
+    if(members.length === 0) { container.innerHTML = "No members"; return; }
+
+    Promise.all(members.map(uid => db.collection('users').doc(uid).get().catch(e => null))).then(userDocs => {
       let html = '';
       userDocs.forEach((uDoc, index) => {
+        if(!uDoc) return;
         const uid = members[index]; const name = uDoc.exists ? uDoc.data().displayName : "Unknown";
         const isThisUserAdmin = currentRoomAdmins.includes(uid);
         let actionBtns = "";
@@ -282,7 +321,7 @@ function loadRoomMembers() {
                   <div>${actionBtns}</div></div>`;
       });
       container.innerHTML = html;
-    });
+    }).catch(e => { container.innerHTML = "Error loading members."; console.error(e); });
   });
 }
 function makeAdmin(uid) { if(confirm("Make Admin?")) db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayUnion(uid) }).then(() => loadRoomMembers()); }
@@ -350,7 +389,7 @@ function uploadCSV() {
       const creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown";
       for (let i = 1; i < rows.length; i++) {
         const cols = rows[i].trim().split(','); 
-        if (cols.length >= 6) { // 6 columns CSV logic maintained
+        if (cols.length >= 6) {
           db.collection('rooms').doc(currentRoomId).collection('questions').add({
             topic: 'General', question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(),
             optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(),
@@ -397,6 +436,7 @@ function loadRoomQuestions() {
       let q = doc.data(); q.id = doc.id; q.topic = q.topic || 'General';
       allCurrentQuestions.push(q);
       if(attemptedList.includes(q.id)) return;
+      
       let author = q.creatorName || "Unknown Author";
       if(!authorMap[author]) authorMap[author] = []; authorMap[author].push(q);
     });
@@ -408,7 +448,7 @@ function loadRoomQuestions() {
       let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`;
       let isFolderOpen = openAuthorFolders.includes(authorDivId) ? 'block' : 'none';
       html += `<div class="q-card">
-                 <h4 style="color:var(--primary-btn); cursor:pointer;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length}) 🔽</h4>
+                 <h4 style="color:var(--primary-btn); cursor:pointer; font-size:15px; margin:0;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length}) 🔽</h4>
                  <div id="${authorDivId}" style="display: ${isFolderOpen}; margin-top:10px;">${renderQuestionsHTML(authorMap[author])}</div>
                </div>`;
     }
@@ -422,9 +462,8 @@ function renderQuestionsHTML(questionsArray) {
     let timeBadge = q.timeLimit ? `<span style="background:#ffeeba; color:#856404; padding:2px 5px; border-radius:3px; font-size:11px;">⏳ ${q.timeLimit}s</span>` : '';
     let controlBtns = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `<div style="margin-bottom:8px;"><button onclick="editQuestion('${q.id}')" style="background:#ffc107; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">✏️ Edit</button> <button onclick="deleteQuestion('${q.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🗑️ Delete</button></div>` : '';
     
-    // 🔀 SHUFFLE LOGIC
     let options = [{text: q.optionA, let: 'A'}, {text: q.optionB, let: 'B'}, {text: q.optionC, let: 'C'}, {text: q.optionD, let: 'D'}];
-    options.sort(() => Math.random() - 0.5);
+    options.sort(() => Math.random() - 0.5); 
 
     let optsHtml = '';
     options.forEach(o => {
@@ -435,14 +474,16 @@ function renderQuestionsHTML(questionsArray) {
       <div id="q-card-${q.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;">
         ${controlBtns}
         <p style="font-weight:bold; margin-bottom:10px;">Q${index+1}. ${q.question} <span class="topic-badge">${q.topic}</span> ${timeBadge}</p>
-        <div style="display:flex; flex-direction:column; gap:5px;">${optsHtml}</div>
+        <div id="mcq-options-${q.id}" style="display:flex; flex-direction:column; gap:5px;">${optsHtml}</div>
         <p id="feedback-${q.id}" style="margin-top:10px; font-size:13px; font-weight:bold; display:none;"></p>
       </div>`;
   });
   return htmlString;
 }
 
-// ✅ Correct Answer NOT Disappeared Instantly (1.5s wait setup as requested)
+// ---------------------------------
+// REVISION LOGIC 
+// ---------------------------------
 function checkAnswer(qId, selectedOpt, correctOpt) {
   const btns = document.querySelectorAll(`[id^="btn-${qId}-"]`);
   btns.forEach(b => b.disabled = true);
@@ -455,35 +496,40 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
 
     let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
     if(!attemptedList.includes(qId)) { attemptedList.push(qId); localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(attemptedList)); }
-    
-    // As per user request, card will wait 1.5 seconds so user can see correct answer, then disappear.
     setTimeout(() => { const card = document.getElementById(`q-card-${qId}`); if(card) card.style.display = 'none'; }, 1500);
   } else {
     clickedBtn.style.background = "#f8d7da"; clickedBtn.style.color = "#721c24"; clickedBtn.style.borderColor = "#dc3545";
     document.getElementById(`btn-${qId}-${correctOpt}`).style.background = "#d4edda"; document.getElementById(`btn-${qId}-${correctOpt}`).style.borderColor = "#28a745"; document.getElementById(`btn-${qId}-${correctOpt}`).style.color = "#155724";
     feedback.innerText = "❌ Wrong Answer! (Saved to Revision)"; feedback.style.color = "#dc3545";
 
-    const cardHtml = document.getElementById(`q-card-${qId}`).innerHTML;
+    const cardElement = document.getElementById(`q-card-${qId}`);
+    const cloneCard = cardElement.cloneNode(true);
+    if(cloneCard.children[0].tagName === 'DIV') cloneCard.children[0].style.display = 'none'; 
+    const finalHtml = cloneCard.innerHTML;
+
     if (!wrongQuestions.some(item => item.id === qId)) {
-      wrongQuestions.push({ id: qId, html: cardHtml }); localStorage.setItem('studyRoomWrong', JSON.stringify(wrongQuestions)); updateRevisionCount();
+      wrongQuestions.push({ id: qId, html: finalHtml }); 
+      localStorage.setItem('studyRoomWrong', JSON.stringify(wrongQuestions)); 
+      updateRevisionCount();
     }
   }
   feedback.style.display = 'block';
 }
 
-// ---------------------------------
-// REVISION SCREEN
-// ---------------------------------
 function openRevisionBox() {
   window.location.hash = '#revision'; const container = document.getElementById('revisionListContainer');
   if (wrongQuestions.length === 0) { container.innerHTML = '<p>Your revision list is empty!</p>'; return; }
   let html = '';
   wrongQuestions.forEach((item, index) => {
     html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;">
-               <p style="color:#dc3545; font-size:12px; font-weight:bold;">Revision Item #${index + 1}</p>${item.html}
+               <p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${index + 1}</p>
+               ${item.html}
              </div>`;
   });
   container.innerHTML = html;
 }
 function closeRevisionBox() { window.history.back(); }
-function updateRevisionCount() { document.getElementById('revCount').innerText = wrongQuestions.length; }
+function updateRevisionCount() { 
+    const badge = document.getElementById('revCount');
+    if(badge) badge.innerText = wrongQuestions.length; 
+}
