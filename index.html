@@ -54,13 +54,23 @@
 
   <!-- DASHBOARD SCREEN -->
   <div class="auth-container" id="dashboardScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
       <h2 id="welcomeText" style="margin: 0; color: var(--primary-btn); font-size: 20px;">Welcome, User!</h2>
       <div style="display: flex; gap: 8px;">
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #6c757d;" onclick="toggleDarkMode()">🌙 Mode</button>
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #17a2b8;" onclick="openProfileScreen()">👤 Profile</button>
         <button class="btn" style="width: auto; padding: 6px 10px; background-color: #dc3545;" onclick="logoutUser()">Logout</button>
       </div>
+    </div>
+
+    <!-- 🌟 UPDATE 3.0: DAILY GOAL & STREAK TRACKER -->
+    <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: center;">
+      <h4 style="margin: 0 0 10px 0; color: var(--text-color);">🔥 Your Study Streak: <span id="streakCount" style="color: #ff9800; font-size: 18px;">0 Days</span></h4>
+      <p style="font-size: 12px; margin-bottom: 5px;">Daily Goal: Solve 10 Questions</p>
+      <div style="width: 100%; background: #ddd; border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 5px;">
+        <div id="dailyProgressBar" style="width: 0%; height: 100%; background: #28a745; transition: width 0.3s;"></div>
+      </div>
+      <p style="font-size: 11px; font-weight: bold; margin: 0;"><span id="dailyQuestionsDone">0</span> / 10 Completed Today</p>
     </div>
     
     <div style="padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
@@ -73,7 +83,7 @@
         <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision (<span id="revCount">0</span>)</button>
       </div>
 
-      <!-- CREATE & JOIN BOXES (Theek buttons ke niche) -->
+      <!-- CREATE & JOIN BOXES -->
       <div id="createRoomBox" style="display: none; padding: 15px; border: 1px dashed var(--primary-btn); border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
         <h4 style="color: var(--primary-btn); margin-top:0;">Create a New Room</h4>
         <input type="text" id="newRoomName" placeholder="Room Name (e.g. Target 2026)" class="styled-input">
@@ -119,13 +129,21 @@
       <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
     </div>
     
-    <!-- ROOM CONTROLS -->
+    <!-- ROOM CONTROLS & LEADERBOARD BUTTON -->
     <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ff9800; color: white;" onclick="openLeaderboard()">🏆 Leaderboard</button>
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #28a745;" onclick="openShareModal()">🔗 Share Invite</button>
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #17a2b8;" onclick="copyRoomId()">📋 Copy ID</button>
       <button class="btn" id="editRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ffc107; color: black; display: none;" onclick="openEditRoom()">⚙️ Settings</button>
       <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #dc3545;" onclick="leaveRoom()">🚪 Leave</button>
       <button class="btn" id="deleteRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #8b0000; display: none;" onclick="deleteRoom()">🗑️ Delete</button>
+    </div>
+
+    <!-- 🌟 UPDATE 3.0: LEADERBOARD MODAL -->
+    <div id="leaderboardModal" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid #ff9800; background: var(--bg-color); margin-bottom: 20px;">
+      <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Room Leaderboard</h3>
+      <div id="leaderboardList" style="margin-top: 15px; font-size: 14px;">Loading ranks...</div>
+      <button class="btn" style="padding: 6px; margin-top: 15px; background: #6c757d;" onclick="closeLeaderboard()">Close</button>
     </div>
 
     <!-- SHARE MODAL -->
@@ -234,4 +252,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
