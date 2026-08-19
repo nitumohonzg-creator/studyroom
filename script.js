@@ -25,6 +25,101 @@ let allCurrentQuestions = [];
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 
 updateRevisionCount();
+checkDailyStreak(); // Initialize streak on load
+
+// -------------------------------
+// 🔥 DAILY STREAK & GOAL LOGIC (UPDATE 3.0)
+// -------------------------------
+function checkDailyStreak() {
+  const today = new Date().toDateString();
+  let streakData = JSON.parse(localStorage.getItem('studyRoomStreak')) || { date: '', count: 0, streak: 0 };
+
+  if (streakData.date !== today) {
+    let yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    let yesterdayStr = yesterdayDate.toDateString();
+
+    if (streakData.date === yesterdayStr && streakData.count >= 10) {
+       // Maintained streak
+    } else if (streakData.date !== yesterdayStr) {
+       streakData.streak = 0; // Missed a day, streak broken
+    }
+    streakData.date = today;
+    streakData.count = 0;
+    localStorage.setItem('studyRoomStreak', JSON.stringify(streakData));
+  }
+  updateStreakUI();
+}
+
+function updateStreakUI() {
+  let streakData = JSON.parse(localStorage.getItem('studyRoomStreak')) || { date: '', count: 0, streak: 0 };
+  const streakCountEl = document.getElementById('streakCount');
+  if(streakCountEl) streakCountEl.innerText = streakData.streak + (streakData.streak === 1 ? " Day" : " Days");
+  
+  const dailyDoneEl = document.getElementById('dailyQuestionsDone');
+  if(dailyDoneEl) dailyDoneEl.innerText = Math.min(streakData.count, 10);
+  
+  const progressBar = document.getElementById('dailyProgressBar');
+  if(progressBar) {
+    let pct = Math.min((streakData.count / 10) * 100, 100);
+    progressBar.style.width = pct + "%";
+  }
+}
+
+function recordQuestionAttempt() {
+  const today = new Date().toDateString();
+  let streakData = JSON.parse(localStorage.getItem('studyRoomStreak'));
+  if(streakData.date !== today) checkDailyStreak();
+
+  if(streakData.count < 10) {
+     streakData.count++;
+     if(streakData.count === 10) {
+         streakData.streak++;
+         setTimeout(() => alert("🎉 Congratulations! Daily Goal Completed. Your streak has increased! 🔥"), 500);
+     }
+     localStorage.setItem('studyRoomStreak', JSON.stringify(streakData));
+     updateStreakUI();
+  }
+}
+
+// -------------------------------
+// 🏆 LEADERBOARD LOGIC (UPDATE 3.0)
+// -------------------------------
+function updateLeaderboardScore() {
+  db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
+      let name = doc.exists ? doc.data().displayName : "Unknown User";
+      db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({
+          name: name,
+          score: firebase.firestore.FieldValue.increment(1)
+      }, { merge: true });
+  });
+}
+
+function openLeaderboard() {
+  document.getElementById('leaderboardModal').style.display = 'block';
+  const container = document.getElementById('leaderboardList');
+  container.innerHTML = "Loading rankings...";
+
+  db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => {
+      if(snap.empty) { container.innerHTML = "No scores yet. Start practicing!"; return; }
+      let html = '';
+      let rank = 1;
+      snap.forEach(doc => {
+          let d = doc.data();
+          let medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : '🏅'));
+          html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);">
+                      <span>${medal} <b>${d.name}</b></span>
+                      <span style="color:#28a745; font-weight:bold;">${d.score} pts</span>
+                   </div>`;
+          rank++;
+      });
+      container.innerHTML = html;
+  });
+}
+
+function closeLeaderboard() {
+  document.getElementById('leaderboardModal').style.display = 'none';
+}
 
 // -------------------------------
 // 🌙 DARK MODE LOGIC
@@ -70,7 +165,7 @@ function handleHashChange() {
   if (!auth.currentUser) { document.getElementById('authBox').style.display = 'block'; return; }
 
   if (hash === '#dashboard' || hash === '') {
-    document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms();
+    document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms(); updateStreakUI();
   } else if (hash === '#room' && currentRoomId) {
     document.getElementById('roomViewScreen').style.display = 'block';
   } else if (hash === '#profile') {
@@ -103,14 +198,8 @@ function openShareModal() {
   document.getElementById('shareModal').style.display = 'block';
 }
 
-function closeShareModal() {
-  document.getElementById('shareModal').style.display = 'none';
-}
-
-function copyInviteLink() {
-  const link = document.getElementById('shareLinkInput').value;
-  navigator.clipboard.writeText(link).then(() => alert("🔗 Link Copied!"));
-}
+function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
+function copyInviteLink() { navigator.clipboard.writeText(document.getElementById('shareLinkInput').value).then(() => alert("🔗 Link Copied!")); }
 
 function shareViaWhatsApp() {
   const link = document.getElementById('shareLinkInput').value;
@@ -248,6 +337,7 @@ function enterRoom(roomId, roomName) {
   document.getElementById('roomTitleText').innerText = roomName;
   document.getElementById('editRoomBox').style.display = 'none';
   document.getElementById('shareModal').style.display = 'none';
+  document.getElementById('leaderboardModal').style.display = 'none';
   document.getElementById('searchQuestion').value = ''; 
   closeAddQuestionBox(); openAuthorFolders = [];
 
@@ -482,7 +572,7 @@ function renderQuestionsHTML(questionsArray) {
 }
 
 // ---------------------------------
-// REVISION LOGIC 
+// ANSWER & REVISION LOGIC 
 // ---------------------------------
 function checkAnswer(qId, selectedOpt, correctOpt) {
   const btns = document.querySelectorAll(`[id^="btn-${qId}-"]`);
@@ -490,9 +580,15 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   const clickedBtn = document.getElementById(`btn-${qId}-${selectedOpt}`);
   const feedback = document.getElementById(`feedback-${qId}`);
 
+  // 🌟 Update 3.0: Har sawal attempt karne par daily goal badhega
+  recordQuestionAttempt(); 
+
   if (selectedOpt === correctOpt) {
     clickedBtn.style.background = "#d4edda"; clickedBtn.style.color = "#155724"; clickedBtn.style.borderColor = "#28a745";
     feedback.innerText = "✅ Correct Answer!"; feedback.style.color = "#28a745";
+
+    // 🌟 Update 3.0: Sahi jawab par leaderboard ka score badhega
+    updateLeaderboardScore();
 
     let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
     if(!attemptedList.includes(qId)) { attemptedList.push(qId); localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(attemptedList)); }
