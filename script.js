@@ -19,12 +19,12 @@ let currentRoomName = null;
 let currentRoomCreator = null;
 let currentRoomAdmins = [];
 let currentRoomAdminOnlyMCQ = false;
-let currentRoomIsPublic = false; // 🌟 NEW: Track Public Status
+let currentRoomIsPublic = false; 
 let editingQuestionId = null;
 let openAuthorFolders = []; 
 let allCurrentQuestions = [];
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
-let allPublicRooms = []; // For Discover Search
+let allPublicRooms = []; 
 
 updateRevisionCount();
 checkDailyStreak(); 
@@ -72,20 +72,32 @@ function recordQuestionAttempt() {
 }
 
 // -------------------------------
-// 🏆 LEADERBOARD LOGIC
+// 🏆 LEADERBOARD LOGIC (FIXED)
 // -------------------------------
 function updateLeaderboardScore() {
+  if(!auth.currentUser) return;
   db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
       let name = doc.exists ? doc.data().displayName : "Unknown User";
       db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({
           name: name, score: firebase.firestore.FieldValue.increment(1)
-      }, { merge: true });
-  });
+      }, { merge: true }).catch(e => console.error(e));
+  }).catch(e => console.error(e));
 }
+
 function openLeaderboard() {
-  document.getElementById('leaderboardModal').style.display = 'block';
-  const container = document.getElementById('leaderboardList'); container.innerHTML = "Loading rankings...";
-  db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => {
+  const modal = document.getElementById('leaderboardModal');
+  const container = document.getElementById('leaderboardList');
+  
+  if(!modal || !container) { 
+    alert("⚠️ Error: Leaderboard Box HTML missing. Please copy the Update 3.1 HTML properly."); 
+    return; 
+  }
+
+  modal.style.display = 'block';
+  container.innerHTML = "Loading rankings...";
+  
+  db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get()
+  .then(snap => {
       if(snap.empty) { container.innerHTML = "No scores yet. Start practicing!"; return; }
       let html = ''; let rank = 1;
       snap.forEach(doc => {
@@ -93,10 +105,19 @@ function openLeaderboard() {
           html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);">
                       <span>${medal} <b>${d.name}</b></span><span style="color:#28a745; font-weight:bold;">${d.score} pts</span>
                    </div>`; rank++;
-      }); container.innerHTML = html;
+      }); 
+      container.innerHTML = html;
+  })
+  .catch(err => {
+      container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Data Error: ${err.message}</span>`;
+      console.error(err);
   });
 }
-function closeLeaderboard() { document.getElementById('leaderboardModal').style.display = 'none'; }
+
+function closeLeaderboard() { 
+  const modal = document.getElementById('leaderboardModal');
+  if(modal) modal.style.display = 'none'; 
+}
 
 // -------------------------------
 // 🌙 DARK MODE LOGIC
@@ -114,7 +135,9 @@ function toggleDarkMode() {
 // 🌟 SMART ROUTING & DASHBOARD
 // -------------------------------
 function hideAllScreens() {
-  ['authBox', 'dashboardScreen', 'roomViewScreen', 'profileScreen', 'revisionScreen'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+  ['authBox', 'dashboardScreen', 'roomViewScreen', 'profileScreen', 'revisionScreen'].forEach(id => { 
+    let el = document.getElementById(id); if(el) el.style.display = 'none'; 
+  });
 }
 window.addEventListener('hashchange', handleHashChange);
 
@@ -194,13 +217,27 @@ function viewUserProfile(uid) {
 function closeViewProfile() { document.getElementById('viewProfileModal').style.display = 'none'; }
 
 // -------------------------------
-// 🌍 DISCOVERY LOGIC (NEW 3.1)
+// 🌍 DISCOVERY LOGIC (FIXED)
 // -------------------------------
 function openDiscoverRooms() {
-  document.getElementById('discoverRoomsBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; document.getElementById('joinRoomBox').style.display = 'none';
-  const container = document.getElementById('publicRoomsListContainer'); container.innerHTML = 'Loading public rooms...';
+  const discoverBox = document.getElementById('discoverRoomsBox');
+  const createBox = document.getElementById('createRoomBox');
+  const joinBox = document.getElementById('joinRoomBox');
   
-  db.collection('rooms').where('isPublic', '==', true).get().then(snap => {
+  if(!discoverBox) { 
+    alert("⚠️ Error: Discover Box HTML missing! Did you update index.html with the 3.1 code?"); 
+    return; 
+  }
+
+  discoverBox.style.display = 'block'; 
+  if(createBox) createBox.style.display = 'none'; 
+  if(joinBox) joinBox.style.display = 'none';
+  
+  const container = document.getElementById('publicRoomsListContainer'); 
+  container.innerHTML = 'Loading public rooms...';
+  
+  db.collection('rooms').where('isPublic', '==', true).get()
+  .then(snap => {
     allPublicRooms = [];
     if(snap.empty) { container.innerHTML = '<p style="color:var(--text-color);">No public rooms available right now.</p>'; return; }
     let html = '';
@@ -215,9 +252,18 @@ function openDiscoverRooms() {
                </div>`;
     });
     container.innerHTML = html;
+  })
+  .catch(err => {
+    container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error: ${err.message}</span>`;
+    console.error(err);
   });
 }
-function closeDiscoverRooms() { document.getElementById('discoverRoomsBox').style.display = 'none'; }
+
+function closeDiscoverRooms() { 
+  const box = document.getElementById('discoverRoomsBox');
+  if(box) box.style.display = 'none'; 
+}
+
 function filterPublicRooms() {
   const query = document.getElementById('searchPublicRoom').value.toLowerCase();
   allPublicRooms.forEach(r => {
@@ -230,22 +276,23 @@ function joinSpecificRoom(roomId) { document.getElementById('joinRoomIdInput').v
 // -------------------------------
 // ROOM MANAGEMENT & SETTINGS
 // -------------------------------
-function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; document.getElementById('discoverRoomsBox').style.display = 'none'; }
+function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; let db=document.getElementById('discoverRoomsBox'); if(db) db.style.display='none'; }
 function closeCreateRoom() { document.getElementById('createRoomBox').style.display = 'none'; }
-function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; document.getElementById('discoverRoomsBox').style.display = 'none'; }
+function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; let db=document.getElementById('discoverRoomsBox'); if(db) db.style.display='none'; }
 function closeJoinRoom() { document.getElementById('joinRoomBox').style.display = 'none'; }
 function backToDashboard() { window.location.hash = '#dashboard'; }
 function copyRoomId() { navigator.clipboard.writeText(currentRoomId).then(() => alert("ID Copied!")); }
 
 function saveRoomToFirebase() {
   const roomName = document.getElementById('newRoomName').value.trim();
-  const isPublic = document.getElementById('isRoomPublicToggle').checked; // 🌟 Read Public Checkbox
+  const toggleEl = document.getElementById('isRoomPublicToggle');
+  const isPublic = toggleEl ? toggleEl.checked : false; 
   if(!roomName) return alert("Enter Name!");
   db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
     db.collection('rooms').add({
       roomName: roomName, creatorId: auth.currentUser.uid, creatorName: doc.data().displayName,
       admins: [auth.currentUser.uid], members: [auth.currentUser.uid], adminOnlyMCQ: false, 
-      isPublic: isPublic, // 🌟 Save Public Status
+      isPublic: isPublic, 
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => { alert("Created!"); closeCreateRoom(); loadMyRooms(); });
   });
@@ -281,9 +328,11 @@ function loadMyRooms() {
 function enterRoom(roomId, roomName) {
   currentRoomId = roomId; currentRoomName = roomName;
   document.getElementById('roomTitleText').innerText = roomName;
-  document.getElementById('editRoomBox').style.display = 'none';
-  document.getElementById('shareModal').style.display = 'none';
-  document.getElementById('leaderboardModal').style.display = 'none';
+  
+  let eb = document.getElementById('editRoomBox'); if(eb) eb.style.display = 'none';
+  let sm = document.getElementById('shareModal'); if(sm) sm.style.display = 'none';
+  let lm = document.getElementById('leaderboardModal'); if(lm) lm.style.display = 'none';
+  
   document.getElementById('searchQuestion').value = ''; 
   closeAddQuestionBox(); openAuthorFolders = [];
 
@@ -292,12 +341,12 @@ function enterRoom(roomId, roomName) {
       currentRoomCreator = doc.data().creatorId;
       currentRoomAdmins = doc.data().admins || [currentRoomCreator];
       currentRoomAdminOnlyMCQ = doc.data().adminOnlyMCQ || false;
-      currentRoomIsPublic = doc.data().isPublic || false; // 🌟 Fetch Public Status
+      currentRoomIsPublic = doc.data().isPublic || false; 
       const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
       
-      document.getElementById('editRoomBtn').style.display = isMeAdmin ? 'inline-block' : 'none';
-      document.getElementById('deleteRoomBtn').style.display = (auth.currentUser.uid === currentRoomCreator) ? 'inline-block' : 'none';
-      document.getElementById('addMcqBtnContainer').style.display = (currentRoomAdminOnlyMCQ && !isMeAdmin) ? 'none' : 'block';
+      let adminBtn = document.getElementById('editRoomBtn'); if(adminBtn) adminBtn.style.display = isMeAdmin ? 'inline-block' : 'none';
+      let delBtn = document.getElementById('deleteRoomBtn'); if(delBtn) delBtn.style.display = (auth.currentUser.uid === currentRoomCreator) ? 'inline-block' : 'none';
+      let addBtn = document.getElementById('addMcqBtnContainer'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !isMeAdmin) ? 'none' : 'block';
 
       loadRoomMembers(); loadRoomQuestions(); window.location.hash = '#room';
     }
@@ -311,18 +360,20 @@ function deleteRoom() {
   if(confirm("Delete permanently?")) db.collection('rooms').doc(currentRoomId).delete().then(() => backToDashboard());
 }
 
-// 🌟 EDIT ROOM (PUBLIC/PRIVATE TOGGLE ADDED)
+// 🌟 EDIT ROOM 
 function openEditRoom() { 
   document.getElementById('editRoomBox').style.display = 'block'; 
   document.getElementById('editRoomNameInput').value = currentRoomName; 
   document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ;
-  document.getElementById('editRoomPublicToggle').checked = currentRoomIsPublic; // Set current state
+  let pubToggle = document.getElementById('editRoomPublicToggle');
+  if(pubToggle) pubToggle.checked = currentRoomIsPublic; 
 }
 function closeEditRoom() { document.getElementById('editRoomBox').style.display = 'none'; }
 function saveRoomEdit() {
   let newName = document.getElementById('editRoomNameInput').value.trim();
   let adminOnlyToggle = document.getElementById('editRoomAdminOnlyToggle').checked;
-  let publicToggle = document.getElementById('editRoomPublicToggle').checked; // Read new state
+  let pubToggleEl = document.getElementById('editRoomPublicToggle');
+  let publicToggle = pubToggleEl ? pubToggleEl.checked : false; 
   if(!newName) return alert("Enter valid name");
   
   db.collection('rooms').doc(currentRoomId).update({ roomName: newName, adminOnlyMCQ: adminOnlyToggle, isPublic: publicToggle }).then(() => {
