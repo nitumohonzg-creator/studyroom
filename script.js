@@ -72,51 +72,36 @@ function recordQuestionAttempt() {
 }
 
 // -------------------------------
-// 🏆 LEADERBOARD LOGIC (FIXED)
+// 📱 BOTTOM NAVIGATION & PROFILE MENU
 // -------------------------------
-function updateLeaderboardScore() {
-  if(!auth.currentUser) return;
-  db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
-      let name = doc.exists ? doc.data().displayName : "Unknown User";
-      db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({
-          name: name, score: firebase.firestore.FieldValue.increment(1)
-      }, { merge: true }).catch(e => console.error(e));
-  }).catch(e => console.error(e));
-}
-
-function openLeaderboard() {
-  const modal = document.getElementById('leaderboardModal');
-  const container = document.getElementById('leaderboardList');
-  
-  if(!modal || !container) { 
-    alert("⚠️ Error: Leaderboard Box HTML missing. Please copy the Update 3.1 HTML properly."); 
-    return; 
+function openProfileMenuModal() {
+  document.getElementById('profileSettingsModal').style.display = 'flex';
+  if(auth.currentUser) {
+      db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
+          if(doc.exists) document.getElementById('menuWelcomeText').innerText = "Hi, " + doc.data().displayName + "!";
+      });
   }
-
-  modal.style.display = 'block';
-  container.innerHTML = "Loading rankings...";
-  
-  db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get()
-  .then(snap => {
-      if(snap.empty) { container.innerHTML = "No scores yet. Start practicing!"; return; }
-      let html = ''; let rank = 1;
-      snap.forEach(doc => {
-          let d = doc.data(); let medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : '🏅'));
-          html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);">
-                      <span>${medal} <b>${d.name}</b></span><span style="color:#28a745; font-weight:bold;">${d.score} pts</span>
-                   </div>`; rank++;
-      }); 
-      container.innerHTML = html;
-  })
-  .catch(err => {
-      container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Data Error: ${err.message}</span>`;
-      console.error(err);
-  });
 }
 
-function closeLeaderboard() { 
-  const modal = document.getElementById('leaderboardModal');
-  if(modal) modal.style.display = 'none'; 
+function closeProfileMenuModal(event) {
+  if(event && event.target.classList.contains('profile-menu-sheet')) return; // Don't close if clicked inside sheet
+  document.getElementById('profileSettingsModal').style.display = 'none';
+}
+
+function updateBottomNav(activeId) {
+  const navBar = document.getElementById('bottomNavBar');
+  if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId)) {
+    if(navBar) navBar.style.display = 'none'; // Hide in auth screen and room view
+    return;
+  }
+  
+  if(navBar) navBar.style.display = 'flex';
+  ['navHome', 'navDiscover', 'navRevision', 'navProfile'].forEach(id => {
+    let el = document.getElementById(id); if(el) el.classList.remove('active');
+  });
+  if(activeId) {
+    let el = document.getElementById(activeId); if(el) el.classList.add('active');
+  }
 }
 
 // -------------------------------
@@ -124,6 +109,7 @@ function closeLeaderboard() {
 // -------------------------------
 if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 function toggleDarkMode() {
+  closeProfileMenuModal(); // Close menu when toggled
   if(document.documentElement.getAttribute('data-theme') === 'dark') {
     document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme', 'light');
   } else {
@@ -135,9 +121,10 @@ function toggleDarkMode() {
 // 🌟 SMART ROUTING & DASHBOARD
 // -------------------------------
 function hideAllScreens() {
-  ['authBox', 'dashboardScreen', 'roomViewScreen', 'profileScreen', 'revisionScreen'].forEach(id => { 
+  ['authBox', 'dashboardScreen', 'discoverScreen', 'revisionScreen', 'profileScreen', 'roomViewScreen'].forEach(id => { 
     let el = document.getElementById(id); if(el) el.style.display = 'none'; 
   });
+  closeProfileMenuModal();
 }
 window.addEventListener('hashchange', handleHashChange);
 
@@ -146,28 +133,76 @@ function handleHashChange() {
   if (hash.startsWith('#join=')) {
     const joinId = hash.split('=')[1];
     if (auth.currentUser) { document.getElementById('joinRoomIdInput').value = joinId; joinRoomByFirebase(); } 
-    else { alert("Welcome! Login or Sign Up to join."); localStorage.setItem('pendingJoin', joinId); document.getElementById('authBox').style.display = 'block'; }
+    else { alert("Welcome! Login or Sign Up to join."); localStorage.setItem('pendingJoin', joinId); document.getElementById('authBox').style.display = 'block'; updateBottomNav(); }
     return;
   }
-  if (!auth.currentUser) { document.getElementById('authBox').style.display = 'block'; return; }
+  
+  if (!auth.currentUser) { document.getElementById('authBox').style.display = 'block'; updateBottomNav(); return; }
 
-  if (hash === '#dashboard' || hash === '') { document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms(); updateStreakUI(); } 
-  else if (hash === '#room' && currentRoomId) { document.getElementById('roomViewScreen').style.display = 'block'; } 
-  else if (hash === '#profile') { document.getElementById('profileScreen').style.display = 'block'; } 
-  else if (hash === '#revision') { document.getElementById('revisionScreen').style.display = 'block'; openRevisionBox(); } 
+  if (hash === '#dashboard' || hash === '') { 
+      document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms(); checkDailyStreak(); updateBottomNav('navHome');
+  } 
+  else if (hash === '#discover') { 
+      document.getElementById('discoverScreen').style.display = 'block'; loadDiscoverRooms(); updateBottomNav('navDiscover');
+  } 
+  else if (hash === '#revision') { 
+      document.getElementById('revisionScreen').style.display = 'block'; renderRevisionBox(); updateBottomNav('navRevision');
+  } 
+  else if (hash === '#profile') { 
+      document.getElementById('profileScreen').style.display = 'block'; updateBottomNav('navProfile');
+  } 
+  else if (hash === '#room' && currentRoomId) { 
+      document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); 
+  } 
   else { window.location.hash = '#dashboard'; }
 }
 
 auth.onAuthStateChanged((user) => {
   if (user) {
     db.collection('users').doc(user.uid).get().then((doc) => {
-      if(doc.exists) document.getElementById('welcomeText').innerText = "Hi, " + doc.data().displayName + "!";
       let pending = localStorage.getItem('pendingJoin');
       if (pending) { localStorage.removeItem('pendingJoin'); document.getElementById('joinRoomIdInput').value = pending; joinRoomByFirebase(); } 
       else { handleHashChange(); }
     });
   } else { window.location.hash = ''; handleHashChange(); }
 });
+
+// -------------------------------
+// 🏆 LEADERBOARD LOGIC
+// -------------------------------
+function updateLeaderboardScore() {
+  if(!auth || !auth.currentUser || !currentRoomId) return;
+  db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
+      let name = doc.exists ? doc.data().displayName : "Unknown User";
+      db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({
+          name: name, score: firebase.firestore.FieldValue.increment(1)
+      }, { merge: true }).catch(e => console.error("Score Error:", e));
+  }).catch(e => console.error("User fetch error:", e));
+}
+
+function openLeaderboard() {
+  try {
+    const modal = document.getElementById('leaderboardModal');
+    const container = document.getElementById('leaderboardList');
+    if(!modal || !container) return;
+    modal.style.display = 'block'; container.innerHTML = "Loading rankings...";
+    
+    db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get()
+    .then(snap => {
+        if(snap.empty) { container.innerHTML = "No scores yet. Start practicing!"; return; }
+        let html = ''; let rank = 1;
+        snap.forEach(doc => {
+            let d = doc.data(); let medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : '🏅'));
+            html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);">
+                        <span>${medal} <b>${d.name || 'User'}</b></span><span style="color:#28a745; font-weight:bold;">${d.score || 0} pts</span>
+                     </div>`; 
+            rank++;
+        }); 
+        container.innerHTML = html;
+    }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Data Error</span>`; });
+  } catch(e) {}
+}
+function closeLeaderboard() { let m = document.getElementById('leaderboardModal'); if(m) m.style.display = 'none'; }
 
 // -------------------------------
 // 🔗 SOCIAL SHARING
@@ -197,6 +232,7 @@ function forgotPassword() {
 function logoutUser() { auth.signOut().then(() => { window.location.hash=''; window.location.reload(); }); }
 
 function openProfileScreen() {
+  closeProfileMenuModal();
   db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
     if(doc.exists) {
       const data = doc.data(); document.getElementById('profileName').value = data.displayName || ""; document.getElementById('profileUsername').value = data.username || "";
@@ -204,7 +240,7 @@ function openProfileScreen() {
     }
   });
 }
-function closeProfileScreen() { window.history.back(); }
+function closeProfileScreen() { window.location.hash = '#dashboard'; }
 function saveProfileData() {
   const newName = document.getElementById('profileName').value.trim(); if(!newName) return alert("Name required!");
   db.collection('users').doc(auth.currentUser.uid).update({ displayName: newName, username: document.getElementById('profileUsername').value.trim(), mobile: document.getElementById('profileMobile').value.trim(), bio: document.getElementById('profileBio').value.trim() }).then(() => { alert("Updated!"); closeProfileScreen(); });
@@ -217,58 +253,42 @@ function viewUserProfile(uid) {
 function closeViewProfile() { document.getElementById('viewProfileModal').style.display = 'none'; }
 
 // -------------------------------
-// 🌍 DISCOVERY LOGIC (FIXED)
+// 🌍 DISCOVERY LOGIC (Via Bottom Nav)
 // -------------------------------
-function openDiscoverRooms() {
-  const discoverBox = document.getElementById('discoverRoomsBox');
-  const createBox = document.getElementById('createRoomBox');
-  const joinBox = document.getElementById('joinRoomBox');
-  
-  if(!discoverBox) { 
-    alert("⚠️ Error: Discover Box HTML missing! Did you update index.html with the 3.1 code?"); 
-    return; 
-  }
+function openDiscoverRooms() { window.location.hash = '#discover'; }
 
-  discoverBox.style.display = 'block'; 
-  if(createBox) createBox.style.display = 'none'; 
-  if(joinBox) joinBox.style.display = 'none';
-  
-  const container = document.getElementById('publicRoomsListContainer'); 
-  container.innerHTML = 'Loading public rooms...';
-  
-  db.collection('rooms').where('isPublic', '==', true).get()
-  .then(snap => {
-    allPublicRooms = [];
-    if(snap.empty) { container.innerHTML = '<p style="color:var(--text-color);">No public rooms available right now.</p>'; return; }
-    let html = '';
-    snap.forEach(doc => {
-      let r = doc.data(); r.id = doc.id; allPublicRooms.push(r);
-      let isMember = r.members && r.members.includes(auth.currentUser.uid);
-      let btnHtml = isMember ? `<button class="btn" style="width:auto; padding:5px 10px; background:#6c757d; font-size:11px;" disabled>Joined</button>` : `<button class="btn" style="width:auto; padding:5px 10px; background:#28a745; font-size:11px;" onclick="joinSpecificRoom('${r.id}')">Join</button>`;
+function loadDiscoverRooms() {
+  try {
+    const container = document.getElementById('publicRoomsListContainer');
+    if(!container) return;
+    container.innerHTML = 'Loading public rooms...';
+    
+    db.collection('rooms').where('isPublic', '==', true).get()
+    .then(snap => {
+      allPublicRooms = [];
+      if(snap.empty) { container.innerHTML = '<p style="color:var(--text-color);">No public rooms available right now. Be the first to create one!</p>'; return; }
       
-      html += `<div id="pub-room-${r.id}" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color);">
-                 <div><b style="color:var(--primary-btn);">${r.roomName}</b><br><span style="font-size:10px; color:var(--text-color);">By: ${r.creatorName} | 👥 ${r.members ? r.members.length : 1} Members</span></div>
-                 ${btnHtml}
-               </div>`;
-    });
-    container.innerHTML = html;
-  })
-  .catch(err => {
-    container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error: ${err.message}</span>`;
-    console.error(err);
-  });
-}
-
-function closeDiscoverRooms() { 
-  const box = document.getElementById('discoverRoomsBox');
-  if(box) box.style.display = 'none'; 
+      let html = '';
+      snap.forEach(doc => {
+        let r = doc.data(); r.id = doc.id; allPublicRooms.push(r);
+        let isMember = r.members && auth.currentUser && r.members.includes(auth.currentUser.uid);
+        let btnHtml = isMember ? `<button class="btn" style="width:auto; padding:5px 10px; background:#6c757d; font-size:11px;" disabled>Joined</button>` : `<button class="btn" style="width:auto; padding:5px 10px; background:#28a745; font-size:11px;" onclick="joinSpecificRoom('${r.id}')">Join</button>`;
+        
+        html += `<div id="pub-room-${r.id}" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:10px; background:var(--card-bg);">
+                   <div><b style="color:var(--primary-btn); font-size:16px;">${r.roomName || 'Room'}</b><br><span style="font-size:11px; color:var(--text-color);">By: ${r.creatorName || 'Admin'} | 👥 ${r.members ? r.members.length : 1} Members</span></div>
+                   ${btnHtml}
+                 </div>`;
+      });
+      container.innerHTML = html;
+    }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error: ${err.message}</span>`; });
+  } catch(e) { }
 }
 
 function filterPublicRooms() {
   const query = document.getElementById('searchPublicRoom').value.toLowerCase();
   allPublicRooms.forEach(r => {
      const card = document.getElementById(`pub-room-${r.id}`);
-     if(card) card.style.display = r.roomName.toLowerCase().includes(query) ? "flex" : "none";
+     if(card) card.style.display = (r.roomName && r.roomName.toLowerCase().includes(query)) ? "flex" : "none";
   });
 }
 function joinSpecificRoom(roomId) { document.getElementById('joinRoomIdInput').value = roomId; joinRoomByFirebase(); }
@@ -276,9 +296,9 @@ function joinSpecificRoom(roomId) { document.getElementById('joinRoomIdInput').v
 // -------------------------------
 // ROOM MANAGEMENT & SETTINGS
 // -------------------------------
-function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; let db=document.getElementById('discoverRoomsBox'); if(db) db.style.display='none'; }
+function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; }
 function closeCreateRoom() { document.getElementById('createRoomBox').style.display = 'none'; }
-function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; let db=document.getElementById('discoverRoomsBox'); if(db) db.style.display='none'; }
+function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; }
 function closeJoinRoom() { document.getElementById('joinRoomBox').style.display = 'none'; }
 function backToDashboard() { window.location.hash = '#dashboard'; }
 function copyRoomId() { navigator.clipboard.writeText(currentRoomId).then(() => alert("ID Copied!")); }
@@ -292,8 +312,7 @@ function saveRoomToFirebase() {
     db.collection('rooms').add({
       roomName: roomName, creatorId: auth.currentUser.uid, creatorName: doc.data().displayName,
       admins: [auth.currentUser.uid], members: [auth.currentUser.uid], adminOnlyMCQ: false, 
-      isPublic: isPublic, 
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      isPublic: isPublic, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => { alert("Created!"); closeCreateRoom(); loadMyRooms(); });
   });
 }
@@ -304,7 +323,7 @@ function joinRoomByFirebase() {
   db.collection('rooms').doc(roomId).get().then(doc => {
     if(doc.exists) {
       db.collection('rooms').doc(roomId).update({ members: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid) });
-      closeJoinRoom(); closeDiscoverRooms(); enterRoom(doc.id, doc.data().roomName);
+      closeJoinRoom(); enterRoom(doc.id, doc.data().roomName);
     } else { alert("Invalid ID!"); window.location.hash = '#dashboard'; }
   });
 }
@@ -317,7 +336,7 @@ function loadMyRooms() {
     snap.forEach(doc => {
       let isPub = doc.data().isPublic ? '<span style="color:#17a2b8; font-size:10px;">🌍 Public</span>' : '<span style="color:#6c757d; font-size:10px;">🔒 Private</span>';
       html += `<div class="q-card" style="display:flex; justify-content:space-between; align-items:center;">
-                 <div><b>${doc.data().roomName}</b><br>${isPub}</div>
+                 <div><b style="font-size:16px;">${doc.data().roomName}</b><br>${isPub}</div>
                  <button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button>
                </div>`;
     });
@@ -353,32 +372,21 @@ function enterRoom(roomId, roomName) {
   });
 }
 
-function leaveRoom() {
-  if(confirm("Leave room?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid), admins: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid) }).then(() => backToDashboard());
-}
-function deleteRoom() {
-  if(confirm("Delete permanently?")) db.collection('rooms').doc(currentRoomId).delete().then(() => backToDashboard());
-}
+function leaveRoom() { if(confirm("Leave room?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid), admins: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid) }).then(() => backToDashboard()); }
+function deleteRoom() { if(confirm("Delete permanently?")) db.collection('rooms').doc(currentRoomId).delete().then(() => backToDashboard()); }
 
-// 🌟 EDIT ROOM 
 function openEditRoom() { 
-  document.getElementById('editRoomBox').style.display = 'block'; 
-  document.getElementById('editRoomNameInput').value = currentRoomName; 
-  document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ;
-  let pubToggle = document.getElementById('editRoomPublicToggle');
-  if(pubToggle) pubToggle.checked = currentRoomIsPublic; 
+  document.getElementById('editRoomBox').style.display = 'block'; document.getElementById('editRoomNameInput').value = currentRoomName; document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ;
+  let pubToggle = document.getElementById('editRoomPublicToggle'); if(pubToggle) pubToggle.checked = currentRoomIsPublic; 
 }
 function closeEditRoom() { document.getElementById('editRoomBox').style.display = 'none'; }
 function saveRoomEdit() {
   let newName = document.getElementById('editRoomNameInput').value.trim();
   let adminOnlyToggle = document.getElementById('editRoomAdminOnlyToggle').checked;
-  let pubToggleEl = document.getElementById('editRoomPublicToggle');
-  let publicToggle = pubToggleEl ? pubToggleEl.checked : false; 
+  let pubToggleEl = document.getElementById('editRoomPublicToggle'); let publicToggle = pubToggleEl ? pubToggleEl.checked : false; 
   if(!newName) return alert("Enter valid name");
-  
   db.collection('rooms').doc(currentRoomId).update({ roomName: newName, adminOnlyMCQ: adminOnlyToggle, isPublic: publicToggle }).then(() => {
-    alert("Room Settings Updated!"); currentRoomName = newName; currentRoomAdminOnlyMCQ = adminOnlyToggle; currentRoomIsPublic = publicToggle;
-    document.getElementById('roomTitleText').innerText = newName; closeEditRoom();
+    alert("Room Settings Updated!"); currentRoomName = newName; currentRoomAdminOnlyMCQ = adminOnlyToggle; currentRoomIsPublic = publicToggle; document.getElementById('roomTitleText').innerText = newName; closeEditRoom();
     document.getElementById('addMcqBtnContainer').style.display = (currentRoomAdminOnlyMCQ && !currentRoomAdmins.includes(auth.currentUser.uid)) ? 'none' : 'block';
   });
 }
@@ -407,9 +415,7 @@ function loadRoomMembers() {
           }
         }
         let role = (uid === doc.data().creatorId) ? '👑' : (isThisUserAdmin ? '🛡️' : '👤');
-        html += `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border-color);">
-                  <span style="color:var(--primary-btn); cursor:pointer;" onclick="viewUserProfile('${uid}')">${role} ${name}</span>
-                  <div>${actionBtns}</div></div>`;
+        html += `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border-color);"><span style="color:var(--primary-btn); cursor:pointer;" onclick="viewUserProfile('${uid}')">${role} ${name}</span><div>${actionBtns}</div></div>`;
       });
       container.innerHTML = html;
     }).catch(e => { container.innerHTML = "Error loading members."; });
@@ -523,13 +529,13 @@ function checkAnswer(qId, selectedOpt, correctOpt) {
   feedback.style.display = 'block';
 }
 
-function openRevisionBox() {
-  window.location.hash = '#revision'; const container = document.getElementById('revisionListContainer');
+function openRevisionBox() { window.location.hash = '#revision'; }
+function renderRevisionBox() {
+  const container = document.getElementById('revisionListContainer');
   if (wrongQuestions.length === 0) { container.innerHTML = '<p>Your revision list is empty!</p>'; return; }
   let html = '';
   wrongQuestions.forEach((item, index) => {
     html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;"><p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${index + 1}</p>${item.html}</div>`;
   }); container.innerHTML = html;
 }
-function closeRevisionBox() { window.history.back(); }
 function updateRevisionCount() { const badge = document.getElementById('revCount'); if(badge) badge.innerText = wrongQuestions.length; }
