@@ -5,15 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudyRoom Pro</title>
   <link rel="stylesheet" href="style.css">
-  <!-- FontAwesome for Social Icons -->
+  <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    /* 🌟 INSTAGRAM STYLE BOTTOM NAV CSS */
+    body { padding-bottom: 70px; } /* Pushes content up so bottom nav doesn't hide it */
+    
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--card-bg); border-top: 1px solid var(--border-color);
+      display: flex; justify-content: space-around; align-items: center;
+      height: 60px; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .nav-item {
+      color: var(--text-color); font-size: 24px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      flex: 1; transition: 0.2s; opacity: 0.7;
+    }
+    .nav-item:hover, .nav-item.active { opacity: 1; color: var(--primary-btn); }
+    
+    .round-profile-pic {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary-btn); color: white;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 16px; border: 2px solid transparent;
+    }
+    .nav-item.active .round-profile-pic { border-color: var(--primary-btn); background: transparent; color: var(--primary-btn); }
+
+    /* 🌟 PROFILE MENU (BOTTOM SHEET) */
+    .profile-menu-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 2000; display: none;
+      justify-content: center; align-items: flex-end;
+    }
+    .profile-menu-sheet {
+      background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0;
+      padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    
+    .menu-btn {
+      width: 100%; padding: 15px; text-align: left; background: transparent;
+      border: none; border-bottom: 1px solid var(--border-color);
+      color: var(--text-color); font-size: 16px; font-weight: bold; cursor: pointer;
+    }
+    .menu-btn i { width: 30px; color: var(--primary-btn); }
+    .menu-btn:last-child { border-bottom: none; color: #dc3545; }
+    .menu-btn:last-child i { color: #dc3545; }
+    .styled-input { width: 100%; padding: 8px; margin-bottom: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
+  </style>
 </head>
 <body>
 
   <!-- AUTHENTICATION SCREEN -->
   <div class="auth-container" id="authBox">
     <div id="loginForm">
-      <h2 style="color: var(--primary-btn); text-align: center;">Welcome Back!</h2>
+      <h2 style="color: var(--primary-btn); text-align: center;">StudyRoom Pro</h2>
+      <p style="text-align: center; color: var(--text-color); font-size: 14px; margin-bottom: 20px;">Welcome Back!</p>
       <div class="input-group">
         <label>Email</label>
         <input type="email" id="loginEmail" placeholder="Enter your email">
@@ -52,16 +103,31 @@
     </div>
   </div>
 
+  <!-- INSTAGRAM STYLE BOTTOM NAVIGATION BAR -->
+  <nav id="bottomNavBar" class="bottom-nav" style="display: none;">
+    <div class="nav-item active" id="navHome" onclick="backToDashboard()"><i class="fas fa-home"></i></div>
+    <div class="nav-item" id="navDiscover" onclick="openDiscoverRooms()"><i class="fas fa-search"></i></div>
+    <div class="nav-item" id="navRevision" onclick="openRevisionBox()"><i class="fas fa-book-open"></i></div>
+    <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()"><div class="round-profile-pic"><i class="fas fa-user"></i></div></div>
+  </nav>
+
+  <!-- PROFILE SETTINGS MENU (BOTTOM SHEET) -->
+  <div id="profileSettingsModal" class="profile-menu-overlay" onclick="closeProfileMenuModal(event)">
+    <div class="profile-menu-sheet" onclick="event.stopPropagation()">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div>
+      </div>
+      <h3 id="menuWelcomeText" style="margin: 0 0 15px 0; color: var(--primary-btn); text-align: center;">Hi, User!</h3>
+      <button class="menu-btn" onclick="openProfileScreen()"><i class="fas fa-user-edit"></i> Edit Profile</button>
+      <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark / Light Mode</button>
+      <button class="menu-btn" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+
   <!-- DASHBOARD SCREEN -->
   <div class="auth-container" id="dashboardScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h2 id="welcomeText" style="margin: 0; color: var(--primary-btn); font-size: 20px;">Welcome, User!</h2>
-      <div style="display: flex; gap: 8px;">
-        <button class="btn" style="width: auto; padding: 6px 10px; background-color: #6c757d;" onclick="toggleDarkMode()">🌙 Mode</button>
-        <button class="btn" style="width: auto; padding: 6px 10px; background-color: #17a2b8;" onclick="openProfileScreen()">👤 Profile</button>
-        <button class="btn" style="width: auto; padding: 6px 10px; background-color: #dc3545;" onclick="logoutUser()">Logout</button>
-      </div>
-    </div>
+    <!-- Top Bar is now clean -->
+    <h2 style="margin: 0 0 15px 0; color: var(--primary-btn); font-size: 22px;">My Dashboard</h2>
 
     <!-- DAILY GOAL & STREAK TRACKER -->
     <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: center;">
@@ -74,27 +140,21 @@
     </div>
     
     <div style="padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
-      <h3 style="margin-top: 0;">Group Study Rooms</h3>
-      <p style="font-size: 13px; margin-bottom: 15px;">Create, join, or discover new study groups.</p>
+      <h3 style="margin-top: 0;">Study Rooms</h3>
+      <p style="font-size: 13px; margin-bottom: 15px;">Create or join a private group.</p>
       
-      <!-- 🌟 UPDATE 3.1: ADDED DISCOVER BUTTON -->
       <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-        <button class="btn" style="width: auto;" onclick="openCreateRoom()">➕ Create</button>
-        <button class="btn" style="width: auto; background-color: #28a745;" onclick="openJoinRoom()">🤝 Join</button>
-        <button class="btn" style="width: auto; background-color: #17a2b8; color: white;" onclick="openDiscoverRooms()">🌍 Discover</button>
-        <button class="btn" style="width: auto; background-color: #ffc107; color: #000;" onclick="openRevisionBox()">📖 Revision (<span id="revCount">0</span>)</button>
+        <button class="btn" style="width: auto; padding: 10px 20px;" onclick="openCreateRoom()">➕ Create</button>
+        <button class="btn" style="width: auto; padding: 10px 20px; background-color: #28a745;" onclick="openJoinRoom()">🤝 Join</button>
       </div>
 
       <!-- CREATE ROOM BOX -->
       <div id="createRoomBox" style="display: none; padding: 15px; border: 1px dashed var(--primary-btn); border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
         <h4 style="color: var(--primary-btn); margin-top:0;">Create a New Room</h4>
         <input type="text" id="newRoomName" placeholder="Room Name (e.g. Target 2026)" class="styled-input">
-        
-        <!-- 🌟 UPDATE 3.1: PUBLIC ROOM TOGGLE -->
         <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text-color);">
           <input type="checkbox" id="isRoomPublicToggle"> 🌍 Make this room Public (Visible in Discover)
         </label>
-
         <div style="display: flex; gap: 10px;">
           <button class="btn" style="padding: 8px; margin-top: 5px;" onclick="saveRoomToFirebase()">Save</button>
           <button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeCreateRoom()">Cancel</button>
@@ -110,19 +170,6 @@
           <button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeJoinRoom()">Cancel</button>
         </div>
       </div>
-
-      <!-- 🌟 UPDATE 3.1: DISCOVER ROOMS BOX -->
-      <div id="discoverRoomsBox" style="display: none; padding: 15px; border: 1px dashed #17a2b8; border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
-        <h4 style="color: #17a2b8; margin-top:0;">🌍 Discover Public Rooms</h4>
-        <div class="input-group" style="margin-bottom: 10px;">
-          <input type="text" id="searchPublicRoom" placeholder="🔍 Search room names..." onkeyup="filterPublicRooms()" class="styled-input">
-        </div>
-        <div id="publicRoomsListContainer" style="max-height: 250px; overflow-y: auto; font-size: 13px;">
-          Loading public rooms...
-        </div>
-        <button class="btn" style="padding: 8px; margin-top: 10px; background:#6c757d;" onclick="closeDiscoverRooms()">Close</button>
-      </div>
-
     </div>
 
     <div style="margin-top: 20px;">
@@ -131,16 +178,33 @@
     </div>
   </div>
 
+  <!-- DISCOVER ROOMS SCREEN -->
+  <div class="auth-container" id="discoverScreen" style="display: none;">
+    <h2 style="margin: 0 0 15px 0; color: #17a2b8; font-size: 22px;">🌍 Discover Public Rooms</h2>
+    <div class="input-group" style="margin-bottom: 10px;">
+      <input type="text" id="searchPublicRoom" placeholder="🔍 Search room names..." onkeyup="filterPublicRooms()" class="styled-input">
+    </div>
+    <div id="publicRoomsListContainer" style="font-size: 13px;">Loading public rooms...</div>
+  </div>
+
+  <!-- REVISION SCREEN -->
+  <div class="auth-container" id="revisionScreen" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
+      <h2 style="margin: 0; color: #dc3545; font-size: 22px;">📖 Revision List</h2>
+    </div>
+    <div id="revisionListContainer">No wrong answers saved yet!</div>
+  </div>
+
   <!-- PROFILE EDIT SCREEN -->
   <div class="auth-container" id="profileScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; color: var(--primary-btn); font-size: 20px;">👤 Edit Profile</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="closeProfileScreen()">⬅️ Back</button>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
     </div>
-    <div class="input-group"><label>Display Name</label><input type="text" id="profileName"></div>
-    <div class="input-group"><label>Username</label><input type="text" id="profileUsername"></div>
-    <div class="input-group"><label>Mobile</label><input type="number" id="profileMobile"></div>
-    <div class="input-group"><label>Bio</label><input type="text" id="profileBio"></div>
+    <div class="input-group"><label>Display Name</label><input type="text" id="profileName" class="styled-input"></div>
+    <div class="input-group"><label>Username</label><input type="text" id="profileUsername" class="styled-input"></div>
+    <div class="input-group"><label>Mobile</label><input type="number" id="profileMobile" class="styled-input"></div>
+    <div class="input-group"><label>Bio</label><input type="text" id="profileBio" class="styled-input"></div>
     <button class="btn" style="background-color: #28a745;" onclick="saveProfileData()">💾 Save Changes</button>
   </div>
 
@@ -186,10 +250,7 @@
       <h4>Room Settings</h4>
       <input type="text" id="editRoomNameInput" class="styled-input" style="margin-top: 10px;">
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="editRoomAdminOnlyToggle"> Admins only MCQ</label>
-      
-      <!-- 🌟 UPDATE 3.1: PUBLIC TOGGLE IN EDIT -->
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="editRoomPublicToggle"> 🌍 Public Room (Visible in Discover)</label>
-      
       <button class="btn" style="background:#28a745;" onclick="saveRoomEdit()">Update</button>
       <button class="btn" style="background:#666;" onclick="closeEditRoom()">Cancel</button>
     </div>
@@ -202,10 +263,10 @@
 
     <!-- SEARCH BAR -->
     <div class="input-group">
-      <input type="text" id="searchQuestion" placeholder="🔍 Search questions or topics..." onkeyup="filterQuestions()">
+      <input type="text" id="searchQuestion" placeholder="🔍 Search questions or topics..." onkeyup="filterQuestions()" class="styled-input">
     </div>
 
-    <!-- ADD MCQ BUTTONS (CSV & MANUAL) -->
+    <!-- ADD MCQ BUTTONS -->
     <div id="addMcqBtnContainer" style="padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 20px;">
       <button class="btn" style="width: auto; padding: 10px 20px; margin-bottom: 10px;" onclick="openAddQuestionBox()">➕ Add MCQ Manually</button>
       
@@ -214,7 +275,6 @@
         <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 11px;">
           <p style="margin:0 0 5px 0; color:var(--text-color);"><b>CSV Format (6 Columns Required):</b></p>
           <code style="background:var(--bg-color); padding:4px; border-radius:4px; display:block; margin-bottom:5px; color:#d63384;">Question, Option A, Option B, Option C, Option D, Correct (A/B/C/D)</code>
-          <p style="margin:0; color:#888;">* Do not use commas (,) inside your questions or options.</p>
         </div>
         <input type="file" id="csv-file" accept=".csv" style="width:100%; margin-top:5px; padding: 8px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
         <button class="btn" style="background-color: #ff9800; padding:8px 15px; margin-top: 10px;" onclick="uploadCSV()">🚀 Upload Questions</button>
@@ -243,17 +303,8 @@
     </div>
   </div>
 
-  <!-- REVISION SCREEN -->
-  <div class="auth-container" id="revisionScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
-      <h2 style="margin: 0; color: #dc3545; font-size: 20px;">📖 Revision List</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="closeRevisionBox()">⬅️ Back</button>
-    </div>
-    <div id="revisionListContainer">No wrong answers saved yet!</div>
-  </div>
-
   <!-- VIEW PROFILE MODAL -->
-  <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;">
+  <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center;">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
       <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
       <p style="font-weight: bold;">@<span id="viewProfileUsername">username</span></p>
@@ -263,10 +314,6 @@
       <button class="btn" style="background: #6c757d; margin-top: 15px;" onclick="closeViewProfile()">Close</button>
     </div>
   </div>
-
-  <style>
-    .styled-input { width: 100%; padding: 8px; margin-bottom: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
-  </style>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
