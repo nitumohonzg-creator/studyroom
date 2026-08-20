@@ -17,22 +17,36 @@
     .round-profile-pic { width: 26px; height: 26px; border-radius: 50%; background: var(--text-color); color: var(--card-bg); display: flex; justify-content: center; align-items: center; border: 2px solid transparent; transition: 0.2s; }
     .round-profile-pic i { font-size: 13px; }
     .nav-item.active .round-profile-pic { border-color: var(--primary-btn); background: transparent; color: var(--primary-btn); }
+    
     .room-top-nav { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     .room-top-nav .title { font-size: 18px; font-weight: bold; color: var(--primary-btn); display: flex; align-items: center; gap: 15px; }
     .room-top-nav .actions { display: flex; gap: 20px; align-items: center; }
     .room-top-nav i { font-size: 20px; color: var(--text-color); cursor: pointer; }
     .room-content { padding: 75px 15px 20px 15px; } 
-    .profile-menu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; justify-content: center; align-items: flex-end; }
-    .profile-menu-sheet { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); animation: slideUp 0.2s ease-out; }
+    
+    .profile-menu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: none; justify-content: center; align-items: flex-end; }
+    .profile-menu-sheet { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); animation: slideUp 0.2s ease-out; max-height: 90vh; overflow-y: auto;}
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .menu-btn { width: 100%; padding: 15px; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--border-color); color: var(--text-color); font-size: 16px; font-weight: bold; cursor: pointer; }
-    .menu-btn i { width: 30px; color: var(--primary-btn); }
+    
+    .menu-btn { width: 100%; padding: 15px; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--border-color); color: var(--text-color); font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+    .menu-btn i { width: 25px; text-align: center; color: var(--primary-btn); }
     .menu-btn:last-child { border-bottom: none; color: #dc3545; }
     .menu-btn:last-child i { color: #dc3545; }
-    .styled-input { width: 100%; padding: 10px; margin-bottom: 5px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
+    
+    .styled-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
+    
+    /* 🌟 UPDATE 4.0: Selection Action Bar (Floating) */
+    .selection-bar { position: fixed; bottom: 65px; left: 0; right: 0; background: #2c3e50; color: white; padding: 12px 20px; display: none; justify-content: space-between; align-items: center; z-index: 1500; box-shadow: 0 -4px 10px rgba(0,0,0,0.2); border-radius: 15px 15px 0 0; }
+    .selection-bar i { font-size: 20px; cursor: pointer; color: white; margin-left: 20px; transition: 0.2s; }
+    .selection-bar i:hover { color: var(--primary-btn); }
+    
+    /* 🌟 UPDATE 4.0: Nested Folder Styling */
+    .topic-folder { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 10px; padding: 10px; }
+    .topic-title { font-weight: bold; color: var(--text-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
   </style>
 </head>
 <body>
+
   <!-- AUTH BOX -->
   <div class="auth-container" id="authBox">
     <div id="loginForm">
@@ -62,13 +76,14 @@
     <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()"><div class="round-profile-pic"><i class="fas fa-user"></i></div><span>Profile</span></div>
   </nav>
 
-  <!-- PROFILE MENU -->
+  <!-- PROFILE MENU (UPDATED 4.0 - Added Solved Questions Button) -->
   <div id="profileSettingsModal" class="profile-menu-overlay" onclick="closeProfileMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
       <h3 id="menuWelcomeText" style="margin: 0 0 15px 0; color: var(--primary-btn); text-align: center;">Hi, User!</h3>
       <button class="menu-btn" onclick="openProfileScreen()"><i class="fas fa-user-edit"></i> Edit Profile</button>
-      <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark Mode</button>
+      <button class="menu-btn" onclick="openSolvedQuestionsScreen()"><i class="fas fa-check-circle" style="color: #28a745;"></i> My Solved Questions</button>
+      <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark / Light Mode</button>
       <button class="menu-btn" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
   </div>
@@ -126,6 +141,16 @@
     <div id="revisionListContainer">No wrong answers saved yet!</div>
   </div>
 
+  <!-- 🌟 UPDATE 4.0: NEW SOLVED QUESTIONS SCREEN (ACTIVITY HUB) -->
+  <div class="auth-container" id="solvedQuestionsScreen" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
+      <h2 style="margin: 0; color: #28a745; font-size: 20px;">📚 My Solved Questions</h2>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
+    </div>
+    <p style="font-size: 12px; color: var(--text-color);">Your practice history from all rooms. Great for revision!</p>
+    <div id="solvedQuestionsListContainer">No solved questions yet!</div>
+  </div>
+
   <!-- PROFILE EDIT -->
   <div class="auth-container" id="profileScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -139,7 +164,7 @@
     <button class="btn" style="background-color: #28a745;" onclick="saveProfileData()">💾 Save Changes</button>
   </div>
 
-  <!-- ROOM VIEW SCREEN -->
+  <!-- 🌟 ROOM VIEW SCREEN -->
   <div id="roomViewScreen" style="display: none; padding: 0;">
     <div class="room-top-nav">
       <div class="title"><i class="fas fa-arrow-left" onclick="backToDashboard()"></i> <span id="roomTitleText">Room Name</span></div>
@@ -150,15 +175,30 @@
       <button class="btn" style="width: 100%; background: #ff9800; color: white; margin-bottom: 15px;" onclick="openLeaderboard()">🏆 View Room Leaderboard</button>
       <div class="input-group"><input type="text" id="searchQuestion" placeholder="🔍 Search questions..." onkeyup="filterQuestions()" class="styled-input"></div>
       
-      <!-- BULK DELETE CONTROLS -->
-      <div id="bulkDeleteContainer" style="display: none; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px;">
-        <label style="font-weight:bold; cursor:pointer; color:var(--text-color); font-size:14px;"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" style="transform:scale(1.3); margin-right:8px; accent-color:#dc3545;"> Select All</label>
-        <button class="btn" style="width:auto; padding:6px 12px; background-color:#dc3545; font-size:12px; margin:0;" onclick="deleteSelectedQuestions()">🗑️ Delete</button>
-      </div>
-
       <h3 style="margin-bottom:10px;">Practice Quiz</h3>
-      <p style="font-size:11px; color:#888; margin-top:-5px; margin-bottom:15px;">* Admin can long-press a question to Edit or Delete.</p>
+      <p style="font-size:11px; color:#888; margin-top:-5px; margin-bottom:15px;">* Checkbox for Bulk Actions. Long-press to Edit/Delete.</p>
       <div id="questionsListContainer">Loading questions...</div>
+    </div>
+  </div>
+
+  <!-- 🌟 UPDATE 4.0: FLOATING SELECTION ACTION BAR -->
+  <div id="selectionActionBar" class="selection-bar">
+    <span id="selectedCountText" style="font-weight: bold; font-size: 14px;">1 Selected</span>
+    <div style="display: flex; align-items: center;">
+      <i class="fas fa-tags" onclick="openAssignTopicModal()" title="Move to Topic"></i>
+      <i class="fas fa-trash-alt" onclick="deleteSelectedQuestions()" style="color: #ff6b6b;" title="Delete"></i>
+      <i class="fas fa-times-circle" onclick="clearSelection()" title="Cancel"></i>
+    </div>
+  </div>
+
+  <!-- 🌟 UPDATE 4.0: ASSIGN TOPIC MODAL -->
+  <div id="assignTopicModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAssignTopicModal(event)">
+    <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
+      <h3 style="color: var(--primary-btn); margin-top:0;">🏷️ Move to Topic</h3>
+      <p style="font-size: 12px; color: var(--text-color); margin-bottom: 15px;">Assign a topic to the selected questions.</p>
+      <input type="text" id="bulkTopicInput" placeholder="Enter new topic (e.g. Reasoning)" class="styled-input">
+      <button class="btn" style="background:#28a745; margin-top:10px;" onclick="assignTopicToSelected()">Move Questions</button>
+      <button class="btn" style="background:#6c757d;" onclick="closeAssignTopicModal()">Cancel</button>
     </div>
   </div>
 
@@ -206,7 +246,7 @@
     </div>
   </div>
 
-  <!-- 🌟 UPDATE 3.5: MANUAL ADD BOX WITH NEXT/FINISH BUTTONS -->
+  <!-- MANUAL ADD BOX -->
   <div id="addQuestionBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeManualAddBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-top: 0;">✍️ New Question</h3>
@@ -219,15 +259,11 @@
       <input type="text" id="correctOpt" placeholder="Correct Answer (A/B/C/D)" class="styled-input">
       <input type="number" id="queTime" placeholder="Time limit (Optional)" class="styled-input">
       
-      <!-- Naye Buttons -->
       <div id="addMoreBtnContainer" style="display: flex; gap: 8px; margin-top: 15px;">
         <button class="btn" style="background:#ff9800; padding:10px; font-size:13px;" onclick="saveQuestionToFirebase(true)"><i class="fas fa-plus"></i> Save & Next</button>
         <button class="btn" style="background:#28a745; padding:10px; font-size:13px;" onclick="saveQuestionToFirebase(false)"><i class="fas fa-check"></i> Finish</button>
       </div>
-      
-      <!-- Update Button for Edit mode -->
       <button class="btn" id="updateQuestionBtn" style="background:#ffc107; color:black; display:none; margin-top: 15px;" onclick="saveQuestionToFirebase(false)"><i class="fas fa-save"></i> Update Question</button>
-
       <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeManualAddBox()">Cancel</button>
     </div>
   </div>
@@ -268,6 +304,7 @@
     </div>
   </div>
 
+  <!-- VIEW PROFILE -->
   <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center;">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
       <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
