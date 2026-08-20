@@ -37,9 +37,8 @@ function checkDailyStreak() {
   let streakData = JSON.parse(localStorage.getItem('studyRoomStreak')) || { date: '', count: 0, streak: 0 };
   if (streakData.date !== today) {
     let yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    let yesterdayStr = yesterdayDate.toDateString();
-    if (streakData.date === yesterdayStr && streakData.count >= 10) { /* maintained */ } 
-    else if (streakData.date !== yesterdayStr) { streakData.streak = 0; }
+    if (streakData.date === yesterdayDate.toDateString() && streakData.count >= 10) { /* maintained */ } 
+    else if (streakData.date !== yesterdayDate.toDateString()) { streakData.streak = 0; }
     streakData.date = today; streakData.count = 0;
     localStorage.setItem('studyRoomStreak', JSON.stringify(streakData));
   }
@@ -48,12 +47,9 @@ function checkDailyStreak() {
 
 function updateStreakUI() {
   let streakData = JSON.parse(localStorage.getItem('studyRoomStreak')) || { date: '', count: 0, streak: 0 };
-  const streakCountEl = document.getElementById('streakCount');
-  if(streakCountEl) streakCountEl.innerText = streakData.streak + (streakData.streak === 1 ? " Day" : " Days");
-  const dailyDoneEl = document.getElementById('dailyQuestionsDone');
-  if(dailyDoneEl) dailyDoneEl.innerText = Math.min(streakData.count, 10);
-  const progressBar = document.getElementById('dailyProgressBar');
-  if(progressBar) progressBar.style.width = Math.min((streakData.count / 10) * 100, 100) + "%";
+  let sEl = document.getElementById('streakCount'); if(sEl) sEl.innerText = streakData.streak + (streakData.streak === 1 ? " Day" : " Days");
+  let dEl = document.getElementById('dailyQuestionsDone'); if(dEl) dEl.innerText = Math.min(streakData.count, 10);
+  let pBar = document.getElementById('dailyProgressBar'); if(pBar) pBar.style.width = Math.min((streakData.count / 10) * 100, 100) + "%";
 }
 
 function recordQuestionAttempt() {
@@ -72,38 +68,78 @@ function recordQuestionAttempt() {
 }
 
 // -------------------------------
-// 📱 BOTTOM NAVIGATION & PROFILE MENU
+// 📱 BOTTOM NAV & PROFILE MENU
 // -------------------------------
 function openProfileMenuModal() {
   document.getElementById('profileSettingsModal').style.display = 'flex';
-  if(auth.currentUser) {
-      db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
-          if(doc.exists) document.getElementById('menuWelcomeText').innerText = "Hi, " + doc.data().displayName + "!";
-      });
-  }
+  if(auth.currentUser) db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
+      if(doc.exists) document.getElementById('menuWelcomeText').innerText = "Hi, " + doc.data().displayName + "!";
+  });
 }
-
-function closeProfileMenuModal(event) {
-  if(event && event.target.classList.contains('profile-menu-sheet')) return; 
-  let m = document.getElementById('profileSettingsModal');
-  if(m) m.style.display = 'none';
-}
+function closeProfileMenuModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m = document.getElementById('profileSettingsModal'); if(m) m.style.display = 'none'; }
 
 function updateBottomNav(activeId) {
   const navBar = document.getElementById('bottomNavBar');
-  if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId)) {
-    if(navBar) navBar.style.display = 'none'; 
-    return;
-  }
-  
+  if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId)) { if(navBar) navBar.style.display = 'none'; return; }
   if(navBar) navBar.style.display = 'flex';
-  ['navHome', 'navDiscover', 'navRevision', 'navProfile'].forEach(id => {
-    let el = document.getElementById(id); if(el) el.classList.remove('active');
-  });
-  if(activeId) {
-    let el = document.getElementById(activeId); if(el) el.classList.add('active');
-  }
+  ['navHome', 'navDiscover', 'navRevision', 'navProfile'].forEach(id => { let el = document.getElementById(id); if(el) el.classList.remove('active'); });
+  if(activeId) { let el = document.getElementById(activeId); if(el) el.classList.add('active'); }
 }
+
+// -------------------------------
+// 🌟 3.4 MODALS (ROOM MENUS & ADD MCQ)
+// -------------------------------
+function openRoomMenuModal() { document.getElementById('roomMenuModal').style.display = 'flex'; }
+function closeRoomMenuModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m = document.getElementById('roomMenuModal'); if(m) m.style.display = 'none'; }
+
+function openAddMcqChoiceModal() { document.getElementById('addMcqChoiceModal').style.display = 'flex'; }
+function closeAddMcqChoiceModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m = document.getElementById('addMcqChoiceModal'); if(m) m.style.display = 'none'; }
+
+function openMembersModal() { closeRoomMenuModal(); document.getElementById('membersModal').style.display = 'flex'; }
+function closeMembersModal() { document.getElementById('membersModal').style.display = 'none'; }
+
+function openEditRoomBox() { 
+  closeRoomMenuModal(); document.getElementById('editRoomBox').style.display = 'flex'; 
+  document.getElementById('editRoomNameInput').value = currentRoomName; 
+  document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ;
+  let pubToggle = document.getElementById('editRoomPublicToggle'); if(pubToggle) pubToggle.checked = currentRoomIsPublic; 
+}
+function closeEditRoomBox() { document.getElementById('editRoomBox').style.display = 'none'; }
+
+function openManualAddBox() { 
+  closeAddMcqChoiceModal(); editingQuestionId = null; 
+  document.getElementById('addQuestionBoxTitle').innerText = "✍️ New Question"; 
+  document.getElementById('saveQuestionBtn').innerText = "Save Question"; 
+  ['queTopic','queText','optA','optB','optC','optD','correctOpt','queTime'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('addQuestionBox').style.display = 'flex'; 
+}
+function closeManualAddBox() { document.getElementById('addQuestionBox').style.display = 'none'; }
+
+function openCsvUploadBox() { closeAddMcqChoiceModal(); document.getElementById('csvUploadBox').style.display = 'flex'; }
+function closeCsvUploadBox() { document.getElementById('csvUploadBox').style.display = 'none'; }
+
+// -------------------------------
+// 🌟 LONG PRESS LOGIC (UPDATE 3.3/3.4)
+// -------------------------------
+let lpTimer;
+let activeQId = null;
+
+function startLongPress(qId) {
+    activeQId = qId;
+    lpTimer = setTimeout(() => {
+        if (navigator.vibrate) navigator.vibrate(100); // 📱 Vibration 
+        editingQuestionId = qId;
+        document.getElementById('questionActionModal').style.display = 'flex';
+    }, 600); // 0.6 seconds
+}
+function cancelLongPress() { clearTimeout(lpTimer); }
+
+function closeQuestionActionBox(e) { 
+  if(e && e.target.classList.contains('profile-menu-sheet')) return; 
+  let m = document.getElementById('questionActionModal'); if(m) m.style.display = 'none'; 
+}
+function editLongPressedQuestion() { closeQuestionActionBox(); editQuestion(editingQuestionId); }
+function deleteLongPressedQuestion() { closeQuestionActionBox(); deleteQuestion(editingQuestionId); }
 
 // -------------------------------
 // 🌙 DARK MODE LOGIC
@@ -125,36 +161,25 @@ function hideAllScreens() {
   ['authBox', 'dashboardScreen', 'discoverScreen', 'revisionScreen', 'profileScreen', 'roomViewScreen'].forEach(id => { 
     let el = document.getElementById(id); if(el) el.style.display = 'none'; 
   });
-  closeProfileMenuModal();
+  closeProfileMenuModal(); closeRoomMenuModal(); closeAddMcqChoiceModal();
 }
-window.addEventListener('hashchange', handleHashChange);
 
+window.addEventListener('hashchange', handleHashChange);
 function handleHashChange() {
   const hash = window.location.hash; hideAllScreens();
   if (hash.startsWith('#join=')) {
     const joinId = hash.split('=')[1];
     if (auth.currentUser) { document.getElementById('joinRoomIdInput').value = joinId; joinRoomByFirebase(); } 
-    else { alert("Welcome! Login or Sign Up to join."); localStorage.setItem('pendingJoin', joinId); document.getElementById('authBox').style.display = 'block'; updateBottomNav(); }
+    else { alert("Login or Sign Up to join."); localStorage.setItem('pendingJoin', joinId); document.getElementById('authBox').style.display = 'block'; updateBottomNav(); }
     return;
   }
-  
   if (!auth.currentUser) { document.getElementById('authBox').style.display = 'block'; updateBottomNav(); return; }
 
-  if (hash === '#dashboard' || hash === '') { 
-      document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms(); checkDailyStreak(); updateBottomNav('navHome');
-  } 
-  else if (hash === '#discover') { 
-      document.getElementById('discoverScreen').style.display = 'block'; loadDiscoverRooms(); updateBottomNav('navDiscover');
-  } 
-  else if (hash === '#revision') { 
-      document.getElementById('revisionScreen').style.display = 'block'; renderRevisionBox(); updateBottomNav('navRevision');
-  } 
-  else if (hash === '#profile') { 
-      document.getElementById('profileScreen').style.display = 'block'; updateBottomNav('navProfile');
-  } 
-  else if (hash === '#room' && currentRoomId) { 
-      document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); 
-  } 
+  if (hash === '#dashboard' || hash === '') { document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms(); checkDailyStreak(); updateBottomNav('navHome'); } 
+  else if (hash === '#discover') { document.getElementById('discoverScreen').style.display = 'block'; loadDiscoverRooms(); updateBottomNav('navDiscover'); } 
+  else if (hash === '#revision') { document.getElementById('revisionScreen').style.display = 'block'; renderRevisionBox(); updateBottomNav('navRevision'); } 
+  else if (hash === '#profile') { document.getElementById('profileScreen').style.display = 'block'; updateBottomNav('navProfile'); } 
+  else if (hash === '#room' && currentRoomId) { document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); } 
   else { window.location.hash = '#dashboard'; }
 }
 
@@ -169,51 +194,38 @@ auth.onAuthStateChanged((user) => {
 });
 
 // -------------------------------
-// 🏆 LEADERBOARD LOGIC
+// 🏆 LEADERBOARD & 🔗 SHARING
 // -------------------------------
+function openLeaderboard() {
+  const modal = document.getElementById('leaderboardModal'); const container = document.getElementById('leaderboardList');
+  if(!modal || !container) return;
+  modal.style.display = 'flex'; container.innerHTML = "Loading rankings...";
+  db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get()
+  .then(snap => {
+      if(snap.empty) { container.innerHTML = "No scores yet. Start practicing!"; return; }
+      let html = ''; let rank = 1;
+      snap.forEach(doc => {
+          let d = doc.data(); let medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : '🏅'));
+          html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);">
+                      <span>${medal} <b>${d.name || 'User'}</b></span><span style="color:#28a745; font-weight:bold;">${d.score || 0} pts</span>
+                   </div>`; rank++;
+      }); container.innerHTML = html;
+  }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error</span>`; });
+}
+function closeLeaderboard() { document.getElementById('leaderboardModal').style.display = 'none'; }
+
 function updateLeaderboardScore() {
   if(!auth || !auth.currentUser || !currentRoomId) return;
   db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
-      let name = doc.exists ? doc.data().displayName : "Unknown User";
-      db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({
-          name: name, score: firebase.firestore.FieldValue.increment(1)
-      }, { merge: true }).catch(e => console.error(e));
-  }).catch(e => console.error(e));
+      let name = doc.exists ? doc.data().displayName : "Unknown";
+      db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({ name: name, score: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+  });
 }
 
-function openLeaderboard() {
-  try {
-    const modal = document.getElementById('leaderboardModal');
-    const container = document.getElementById('leaderboardList');
-    if(!modal || !container) return;
-    modal.style.display = 'block'; container.innerHTML = "Loading rankings...";
-    
-    db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get()
-    .then(snap => {
-        if(snap.empty) { container.innerHTML = "No scores yet. Start practicing!"; return; }
-        let html = ''; let rank = 1;
-        snap.forEach(doc => {
-            let d = doc.data(); let medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : '🏅'));
-            html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);">
-                        <span>${medal} <b>${d.name || 'User'}</b></span><span style="color:#28a745; font-weight:bold;">${d.score || 0} pts</span>
-                     </div>`; 
-            rank++;
-        }); 
-        container.innerHTML = html;
-    }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Data Error</span>`; });
-  } catch(e) {}
-}
-function closeLeaderboard() { let m = document.getElementById('leaderboardModal'); if(m) m.style.display = 'none'; }
-
-// -------------------------------
-// 🔗 SOCIAL SHARING
-// -------------------------------
-function openShareModal() { document.getElementById('shareLinkInput').value = window.location.origin + window.location.pathname + '#join=' + currentRoomId; document.getElementById('shareModal').style.display = 'block'; }
+function openShareModal() { document.getElementById('shareLinkInput').value = window.location.origin + window.location.pathname + '#join=' + currentRoomId; document.getElementById('shareModal').style.display = 'flex'; }
 function closeShareModal() { document.getElementById('shareModal').style.display = 'none'; }
-function copyInviteLink() { navigator.clipboard.writeText(document.getElementById('shareLinkInput').value).then(() => alert("🔗 Link Copied!")); }
+function copyInviteLink() { navigator.clipboard.writeText(document.getElementById('shareLinkInput').value).then(() => alert("🔗 Copied!")); }
 function shareViaWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join my Study Room on StudyRoom Pro! 📚\nClick here: ${document.getElementById('shareLinkInput').value}`)}`, '_blank'); }
-function shareViaFacebook() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(document.getElementById('shareLinkInput').value)}`, '_blank'); }
-function shareViaTwitter() { window.open(`https://twitter.com/intent/tweet?text=Join my Study Room! 📚&url=${encodeURIComponent(document.getElementById('shareLinkInput').value)}`, '_blank'); }
 
 // -------------------------------
 // AUTHENTICATION & PROFILE
@@ -222,29 +234,23 @@ function toggleAuth(type) { document.getElementById('loginForm').style.display =
 function signupUser() {
   const name = document.getElementById('signupName').value.trim(); const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPassword').value.trim();
   if(!name || !email || !password) return alert("Fill all fields!");
-  auth.createUserWithEmailAndPassword(email, password).then(cred => db.collection('users').doc(cred.user.uid).set({ displayName: name, email: email, username: "", mobile: "", bio: "" }))
-    .then(() => { alert("Created!"); toggleAuth('login'); }).catch(err => alert(err.message));
+  auth.createUserWithEmailAndPassword(email, password).then(cred => db.collection('users').doc(cred.user.uid).set({ displayName: name, email: email, username: "", mobile: "", bio: "" })).then(() => { alert("Created!"); toggleAuth('login'); }).catch(err => alert(err.message));
 }
 function loginUser() { auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value.trim()).catch(err => alert(err.message)); }
 function forgotPassword() {
-  const email = document.getElementById('loginEmail').value.trim(); if(!email) return alert("Enter email first!");
+  const email = document.getElementById('loginEmail').value.trim(); if(!email) return alert("Enter email!");
   auth.sendPasswordResetEmail(email).then(() => alert("Link sent!")).catch(err => alert(err.message));
 }
 function logoutUser() { auth.signOut().then(() => { window.location.hash=''; window.location.reload(); }); }
 
 function openProfileScreen() {
-  closeProfileMenuModal();
-  db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
-    if(doc.exists) {
-      const data = doc.data(); document.getElementById('profileName').value = data.displayName || ""; document.getElementById('profileUsername').value = data.username || "";
-      document.getElementById('profileMobile').value = data.mobile || ""; document.getElementById('profileBio').value = data.bio || ""; window.location.hash = '#profile';
-    }
+  closeProfileMenuModal(); db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
+    if(doc.exists) { const data = doc.data(); document.getElementById('profileName').value = data.displayName || ""; document.getElementById('profileUsername').value = data.username || ""; document.getElementById('profileMobile').value = data.mobile || ""; document.getElementById('profileBio').value = data.bio || ""; window.location.hash = '#profile'; }
   });
 }
-function closeProfileScreen() { window.location.hash = '#dashboard'; }
 function saveProfileData() {
   const newName = document.getElementById('profileName').value.trim(); if(!newName) return alert("Name required!");
-  db.collection('users').doc(auth.currentUser.uid).update({ displayName: newName, username: document.getElementById('profileUsername').value.trim(), mobile: document.getElementById('profileMobile').value.trim(), bio: document.getElementById('profileBio').value.trim() }).then(() => { alert("Updated!"); closeProfileScreen(); });
+  db.collection('users').doc(auth.currentUser.uid).update({ displayName: newName, username: document.getElementById('profileUsername').value.trim(), mobile: document.getElementById('profileMobile').value.trim(), bio: document.getElementById('profileBio').value.trim() }).then(() => { alert("Updated!"); window.location.hash = '#dashboard'; });
 }
 function viewUserProfile(uid) {
   db.collection('users').doc(uid).get().then(doc => {
@@ -254,80 +260,56 @@ function viewUserProfile(uid) {
 function closeViewProfile() { document.getElementById('viewProfileModal').style.display = 'none'; }
 
 // -------------------------------
-// 🌍 DISCOVERY LOGIC
+// 🌍 DISCOVERY
 // -------------------------------
 function openDiscoverRooms() { window.location.hash = '#discover'; }
-
 function loadDiscoverRooms() {
-  try {
-    const container = document.getElementById('publicRoomsListContainer');
-    if(!container) return;
-    container.innerHTML = 'Loading public rooms...';
-    
-    db.collection('rooms').where('isPublic', '==', true).get()
-    .then(snap => {
-      allPublicRooms = [];
-      if(snap.empty) { container.innerHTML = '<p style="color:var(--text-color);">No public rooms available right now. Be the first to create one!</p>'; return; }
-      
-      let html = '';
-      snap.forEach(doc => {
-        let r = doc.data(); r.id = doc.id; allPublicRooms.push(r);
-        let isMember = r.members && auth.currentUser && r.members.includes(auth.currentUser.uid);
-        let btnHtml = isMember ? `<button class="btn" style="width:auto; padding:5px 10px; background:#6c757d; font-size:11px;" disabled>Joined</button>` : `<button class="btn" style="width:auto; padding:5px 10px; background:#28a745; font-size:11px;" onclick="joinSpecificRoom('${r.id}')">Join</button>`;
-        
-        html += `<div id="pub-room-${r.id}" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:10px; background:var(--card-bg);">
-                   <div><b style="color:var(--primary-btn); font-size:16px;">${r.roomName || 'Room'}</b><br><span style="font-size:11px; color:var(--text-color);">By: ${r.creatorName || 'Admin'} | 👥 ${r.members ? r.members.length : 1} Members</span></div>
-                   ${btnHtml}
-                 </div>`;
-      });
-      container.innerHTML = html;
-    }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error</span>`; });
-  } catch(e) { }
+  const container = document.getElementById('publicRoomsListContainer'); if(!container) return; container.innerHTML = 'Loading public rooms...';
+  db.collection('rooms').where('isPublic', '==', true).get().then(snap => {
+    allPublicRooms = [];
+    if(snap.empty) { container.innerHTML = '<p style="color:var(--text-color);">No public rooms available.</p>'; return; }
+    let html = '';
+    snap.forEach(doc => {
+      let r = doc.data(); r.id = doc.id; allPublicRooms.push(r);
+      let isMember = r.members && auth.currentUser && r.members.includes(auth.currentUser.uid);
+      let btnHtml = isMember ? `<button class="btn" style="width:auto; padding:5px 10px; background:#6c757d; font-size:11px;" disabled>Joined</button>` : `<button class="btn" style="width:auto; padding:5px 10px; background:#28a745; font-size:11px;" onclick="joinSpecificRoom('${r.id}')">Join</button>`;
+      html += `<div id="pub-room-${r.id}" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:10px; background:var(--card-bg);">
+                 <div><b style="color:var(--primary-btn); font-size:16px;">${r.roomName || 'Room'}</b><br><span style="font-size:11px; color:var(--text-color);">By: ${r.creatorName || 'Admin'} | 👥 ${r.members ? r.members.length : 1} Members</span></div>${btnHtml}</div>`;
+    }); container.innerHTML = html;
+  }).catch(err => { container.innerHTML = `<span style="color:#dc3545;">❌ Error</span>`; });
 }
-
 function filterPublicRooms() {
   const query = document.getElementById('searchPublicRoom').value.toLowerCase();
-  allPublicRooms.forEach(r => {
-     const card = document.getElementById(`pub-room-${r.id}`);
-     if(card) card.style.display = (r.roomName && r.roomName.toLowerCase().includes(query)) ? "flex" : "none";
-  });
+  allPublicRooms.forEach(r => { const card = document.getElementById(`pub-room-${r.id}`); if(card) card.style.display = (r.roomName && r.roomName.toLowerCase().includes(query)) ? "flex" : "none"; });
 }
-function joinSpecificRoom(roomId) { document.getElementById('joinRoomIdInput').value = roomId; joinRoomByFirebase(); }
 
 // -------------------------------
-// ROOM MANAGEMENT & SETTINGS
+// ROOM CREATION & JOINING
 // -------------------------------
 function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; }
 function closeCreateRoom() { document.getElementById('createRoomBox').style.display = 'none'; }
 function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; }
 function closeJoinRoom() { document.getElementById('joinRoomBox').style.display = 'none'; }
 function backToDashboard() { window.location.hash = '#dashboard'; }
-function copyRoomId() { navigator.clipboard.writeText(currentRoomId).then(() => alert("ID Copied!")); }
+function copyRoomId() { closeRoomMenuModal(); navigator.clipboard.writeText(currentRoomId).then(() => alert("ID Copied!")); }
 
 function saveRoomToFirebase() {
   const roomName = document.getElementById('newRoomName').value.trim();
-  const toggleEl = document.getElementById('isRoomPublicToggle');
-  const isPublic = toggleEl ? toggleEl.checked : false; 
+  const toggleEl = document.getElementById('isRoomPublicToggle'); const isPublic = toggleEl ? toggleEl.checked : false; 
   if(!roomName) return alert("Enter Name!");
   db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
-    db.collection('rooms').add({
-      roomName: roomName, creatorId: auth.currentUser.uid, creatorName: doc.data().displayName,
-      admins: [auth.currentUser.uid], members: [auth.currentUser.uid], adminOnlyMCQ: false, 
-      isPublic: isPublic, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => { alert("Created!"); closeCreateRoom(); loadMyRooms(); });
+    db.collection('rooms').add({ roomName: roomName, creatorId: auth.currentUser.uid, creatorName: doc.data().displayName, admins: [auth.currentUser.uid], members: [auth.currentUser.uid], adminOnlyMCQ: false, isPublic: isPublic, createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+    .then(() => { alert("Created!"); closeCreateRoom(); loadMyRooms(); });
   });
 }
 
 function joinRoomByFirebase() {
-  const roomId = document.getElementById('joinRoomIdInput').value.trim();
-  if(!roomId) return alert("Enter ID!");
+  const roomId = document.getElementById('joinRoomIdInput').value.trim(); if(!roomId) return alert("Enter ID!");
   db.collection('rooms').doc(roomId).get().then(doc => {
-    if(doc.exists) {
-      db.collection('rooms').doc(roomId).update({ members: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid) });
-      closeJoinRoom(); enterRoom(doc.id, doc.data().roomName);
-    } else { alert("Invalid ID!"); window.location.hash = '#dashboard'; }
+    if(doc.exists) { db.collection('rooms').doc(roomId).update({ members: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid) }); closeJoinRoom(); enterRoom(doc.id, doc.data().roomName); } else { alert("Invalid ID!"); window.location.hash = '#dashboard'; }
   });
 }
+function joinSpecificRoom(roomId) { document.getElementById('joinRoomIdInput').value = roomId; joinRoomByFirebase(); }
 
 function loadMyRooms() {
   const container = document.getElementById('roomsListContainer'); container.innerHTML = 'Loading...';
@@ -338,23 +320,19 @@ function loadMyRooms() {
       let isPub = doc.data().isPublic ? '<span style="color:#17a2b8; font-size:10px;">🌍 Public</span>' : '<span style="color:#6c757d; font-size:10px;">🔒 Private</span>';
       html += `<div class="q-card" style="display:flex; justify-content:space-between; align-items:center;">
                  <div><b style="font-size:16px;">${doc.data().roomName}</b><br>${isPub}</div>
-                 <button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button>
-               </div>`;
-    });
-    container.innerHTML = html;
+                 <button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button></div>`;
+    }); container.innerHTML = html;
   });
 }
 
+// -------------------------------
+// ENTER ROOM & SETTINGS
+// -------------------------------
 function enterRoom(roomId, roomName) {
   currentRoomId = roomId; currentRoomName = roomName;
   document.getElementById('roomTitleText').innerText = roomName;
-  
-  let eb = document.getElementById('editRoomBox'); if(eb) eb.style.display = 'none';
-  let sm = document.getElementById('shareModal'); if(sm) sm.style.display = 'none';
-  let lm = document.getElementById('leaderboardModal'); if(lm) lm.style.display = 'none';
-  
   document.getElementById('searchQuestion').value = ''; 
-  closeAddQuestionBox(); openAuthorFolders = [];
+  closeRoomMenuModal(); closeAddMcqChoiceModal(); openAuthorFolders = [];
 
   db.collection('rooms').doc(roomId).get().then(doc => {
     if(doc.exists) {
@@ -364,9 +342,9 @@ function enterRoom(roomId, roomName) {
       currentRoomIsPublic = doc.data().isPublic || false; 
       const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
       
-      let adminBtn = document.getElementById('editRoomBtn'); if(adminBtn) adminBtn.style.display = isMeAdmin ? 'inline-block' : 'none';
-      let delBtn = document.getElementById('deleteRoomBtn'); if(delBtn) delBtn.style.display = (auth.currentUser.uid === currentRoomCreator) ? 'inline-block' : 'none';
-      let addBtn = document.getElementById('addMcqBtnContainer'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !isMeAdmin) ? 'none' : 'block';
+      let editBtn = document.getElementById('editRoomMenuBtn'); if(editBtn) editBtn.style.display = isMeAdmin ? 'block' : 'none';
+      let delBtn = document.getElementById('deleteRoomMenuBtn'); if(delBtn) delBtn.style.display = (auth.currentUser.uid === currentRoomCreator) ? 'block' : 'none';
+      let addBtn = document.getElementById('addMcqMainBtn'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !isMeAdmin) ? 'none' : 'block';
 
       loadRoomMembers(); loadRoomQuestions(); window.location.hash = '#room';
     }
@@ -376,49 +354,38 @@ function enterRoom(roomId, roomName) {
 function leaveRoom() { if(confirm("Leave room?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid), admins: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid) }).then(() => backToDashboard()); }
 function deleteRoom() { if(confirm("Delete permanently?")) db.collection('rooms').doc(currentRoomId).delete().then(() => backToDashboard()); }
 
-function openEditRoom() { 
-  document.getElementById('editRoomBox').style.display = 'block'; document.getElementById('editRoomNameInput').value = currentRoomName; document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ;
-  let pubToggle = document.getElementById('editRoomPublicToggle'); if(pubToggle) pubToggle.checked = currentRoomIsPublic; 
-}
-function closeEditRoom() { document.getElementById('editRoomBox').style.display = 'none'; }
 function saveRoomEdit() {
-  let newName = document.getElementById('editRoomNameInput').value.trim();
-  let adminOnlyToggle = document.getElementById('editRoomAdminOnlyToggle').checked;
+  let newName = document.getElementById('editRoomNameInput').value.trim(); let adminOnlyToggle = document.getElementById('editRoomAdminOnlyToggle').checked;
   let pubToggleEl = document.getElementById('editRoomPublicToggle'); let publicToggle = pubToggleEl ? pubToggleEl.checked : false; 
   if(!newName) return alert("Enter valid name");
   db.collection('rooms').doc(currentRoomId).update({ roomName: newName, adminOnlyMCQ: adminOnlyToggle, isPublic: publicToggle }).then(() => {
-    alert("Room Settings Updated!"); currentRoomName = newName; currentRoomAdminOnlyMCQ = adminOnlyToggle; currentRoomIsPublic = publicToggle; document.getElementById('roomTitleText').innerText = newName; closeEditRoom();
-    document.getElementById('addMcqBtnContainer').style.display = (currentRoomAdminOnlyMCQ && !currentRoomAdmins.includes(auth.currentUser.uid)) ? 'none' : 'block';
+    alert("Room Settings Updated!"); currentRoomName = newName; currentRoomAdminOnlyMCQ = adminOnlyToggle; currentRoomIsPublic = publicToggle; document.getElementById('roomTitleText').innerText = newName; closeEditRoomBox();
+    let addBtn = document.getElementById('addMcqMainBtn'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !currentRoomAdmins.includes(auth.currentUser.uid)) ? 'none' : 'block';
   });
 }
 
-// MEMBERS, ADMIN & KICK
+// MEMBERS
 function loadRoomMembers() {
-  const container = document.getElementById('membersListContainer'); container.innerHTML = 'Loading...';
+  const container = document.getElementById('membersListContainer'); if(!container) return; container.innerHTML = 'Loading...';
   db.collection('rooms').doc(currentRoomId).get().then(doc => {
     if(!doc.exists) return;
-    const members = doc.data().members || []; currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; 
-    const isMeCreator = (auth.currentUser.uid === doc.data().creatorId);
+    const members = doc.data().members || []; currentRoomAdmins = doc.data().admins || [doc.data().creatorId]; const isMeCreator = (auth.currentUser.uid === doc.data().creatorId);
     if(members.length === 0) { container.innerHTML = "No members"; return; }
 
     Promise.all(members.map(uid => db.collection('users').doc(uid).get().catch(e => null))).then(userDocs => {
       let html = '';
       userDocs.forEach((uDoc, index) => {
         if(!uDoc) return;
-        const uid = members[index]; const name = uDoc.exists ? uDoc.data().displayName : "Unknown";
-        const isThisUserAdmin = currentRoomAdmins.includes(uid); let actionBtns = "";
+        const uid = members[index]; const name = uDoc.exists ? uDoc.data().displayName : "Unknown"; const isThisUserAdmin = currentRoomAdmins.includes(uid); let actionBtns = "";
         if (uid !== auth.currentUser.uid) {
           if (isMeCreator) {
-            actionBtns += isThisUserAdmin ? `<button onclick="removeAdminRole('${uid}')" style="background:#ffc107; border:none; padding:3px 8px; font-size:11px; cursor:pointer;">Remove Admin</button> ` : `<button onclick="makeAdmin('${uid}')" style="background:#28a745; color:white; border:none; padding:3px 8px; font-size:11px; cursor:pointer;">Make Admin</button> `;
-            actionBtns += `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; font-size:11px; cursor:pointer;">Kick</button>`;
-          } else if (currentRoomAdmins.includes(auth.currentUser.uid) && !isThisUserAdmin) {
-            actionBtns += `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; font-size:11px; cursor:pointer;">Kick</button>`;
-          }
+            actionBtns += isThisUserAdmin ? `<button onclick="removeAdminRole('${uid}')" style="background:#ffc107; border:none; padding:3px 8px; font-size:11px;">Remove Admin</button> ` : `<button onclick="makeAdmin('${uid}')" style="background:#28a745; color:white; border:none; padding:3px 8px; font-size:11px;">Make Admin</button> `;
+            actionBtns += `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; font-size:11px;">Kick</button>`;
+          } else if (currentRoomAdmins.includes(auth.currentUser.uid) && !isThisUserAdmin) { actionBtns += `<button onclick="removeMember('${uid}')" style="background:#dc3545; color:white; border:none; padding:3px 8px; font-size:11px;">Kick</button>`; }
         }
         let role = (uid === doc.data().creatorId) ? '👑' : (isThisUserAdmin ? '🛡️' : '👤');
         html += `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border-color);"><span style="color:var(--primary-btn); cursor:pointer;" onclick="viewUserProfile('${uid}')">${role} ${name}</span><div>${actionBtns}</div></div>`;
-      });
-      container.innerHTML = html;
+      }); container.innerHTML = html;
     }).catch(e => { container.innerHTML = "Error loading members."; });
   });
 }
@@ -427,18 +394,12 @@ function removeAdminRole(uid) { if(confirm("Remove Admin?")) db.collection('room
 function removeMember(uid) { if(confirm("Kick member?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(uid), admins: firebase.firestore.FieldValue.arrayRemove(uid) }).then(() => loadRoomMembers()); }
 
 // ---------------------------------
-// MCQ (ADD, EDIT, DELETE, BULK UPLOAD)
+// MCQ LOGIC & CSV
 // ---------------------------------
-function openAddQuestionBox() {
-  editingQuestionId = null; document.getElementById('addQuestionBoxTitle').innerText = "New Question"; document.getElementById('saveQuestionBtn').innerText = "Save";
-  ['queTopic','queText','optA','optB','optC','optD','correctOpt','queTime'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('addQuestionBox').style.display = 'block';
-}
-function closeAddQuestionBox() { document.getElementById('addQuestionBox').style.display = 'none'; }
 function editQuestion(qId) {
   db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).get().then(doc => {
     let q = doc.data(); document.getElementById('queTopic').value = q.topic || 'General'; document.getElementById('queText').value = q.question; document.getElementById('optA').value = q.optionA; document.getElementById('optB').value = q.optionB; document.getElementById('optC').value = q.optionC; document.getElementById('optD').value = q.optionD; document.getElementById('correctOpt').value = q.correct; document.getElementById('queTime').value = q.timeLimit || '';
-    editingQuestionId = qId; document.getElementById('addQuestionBoxTitle').innerText = "Edit Question"; document.getElementById('saveQuestionBtn').innerText = "Update"; document.getElementById('addQuestionBox').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' });
+    editingQuestionId = qId; document.getElementById('addQuestionBoxTitle').innerText = "✏️ Edit Question"; document.getElementById('saveQuestionBtn').innerText = "Update"; document.getElementById('addQuestionBox').style.display = 'flex';
   });
 }
 function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => { alert("Deleted!"); loadRoomQuestions(); }); }
@@ -446,69 +407,46 @@ function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('ro
 function saveQuestionToFirebase() {
   const qData = { topic: document.getElementById('queTopic').value.trim() || 'General', question: document.getElementById('queText').value.trim(), optionA: document.getElementById('optA').value.trim(), optionB: document.getElementById('optB').value.trim(), optionC: document.getElementById('optC').value.trim(), optionD: document.getElementById('optD').value.trim(), correct: document.getElementById('correctOpt').value.trim().toUpperCase(), timeLimit: document.getElementById('queTime').value.trim() || null };
   if(!qData.question || !qData.optionA || !qData.correct) return alert("Fill required fields!");
-  if (editingQuestionId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData).then(() => { alert("Updated!"); closeAddQuestionBox(); loadRoomQuestions(); });
-  } else { db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown"; qData.creatorUid = auth.currentUser.uid; qData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection('rooms').doc(currentRoomId).collection('questions').add(qData).then(() => { alert("Added!"); closeAddQuestionBox(); loadRoomQuestions(); }); }); }
+  if (editingQuestionId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData).then(() => { alert("Updated!"); closeManualAddBox(); loadRoomQuestions(); });
+  } else { db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown"; qData.creatorUid = auth.currentUser.uid; qData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection('rooms').doc(currentRoomId).collection('questions').add(qData).then(() => { alert("Added!"); closeManualAddBox(); loadRoomQuestions(); }); }); }
 }
 
-// 🌟 UPDATE 3.2: Custom Topic implementation
 function uploadCSV() {
   const file = document.getElementById('csv-file').files[0]; if (!file) return alert("Select CSV!");
-  const topicInput = document.getElementById('csvTopic');
-  const customTopic = topicInput && topicInput.value.trim() ? topicInput.value.trim() : 'General';
-
+  const topicInput = document.getElementById('csvTopic'); const customTopic = topicInput && topicInput.value.trim() ? topicInput.value.trim() : 'General';
   const reader = new FileReader(); reader.onload = function(e) {
     const rows = e.target.result.split('\n'); let count = 0;
     db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => {
       const creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown";
       for (let i = 1; i < rows.length; i++) {
         const cols = rows[i].trim().split(','); 
-        if (cols.length >= 6) { 
-          db.collection('rooms').doc(currentRoomId).collection('questions').add({ 
-            topic: customTopic, // Assign custom topic from input
-            question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), 
-            creatorName: creatorName, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-          }); 
-          count++; 
-        }
+        if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: customTopic, question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: creatorName, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); count++; }
       }
-      alert(`Uploaded ${count} questions under topic "${customTopic}"!`); document.getElementById('csv-file').value = ""; loadRoomQuestions(); 
+      alert(`Uploaded ${count} questions!`); document.getElementById('csv-file').value = ""; closeCsvUploadBox(); loadRoomQuestions(); 
     });
   }; reader.readAsText(file);
 }
 
 // ---------------------------------
-// 🌟 UPDATE 3.2: BULK DELETE LOGIC
+// BULK DELETE
 // ---------------------------------
 function toggleSelectAll() {
   const isChecked = document.getElementById('selectAllCheckbox').checked;
   const checkboxes = document.querySelectorAll('.bulk-delete-chk');
   checkboxes.forEach(chk => chk.checked = isChecked);
 }
-
 function deleteSelectedQuestions() {
   const checkboxes = document.querySelectorAll('.bulk-delete-chk:checked');
   if (checkboxes.length === 0) return alert("Select at least one question to delete.");
-  
-  if(confirm(`Are you sure you want to delete ${checkboxes.length} selected questions?`)) {
-      let deletePromises = [];
-      checkboxes.forEach(chk => {
-          let qId = chk.value;
-          deletePromises.push(db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete());
-      });
-
-      Promise.all(deletePromises).then(() => {
-          alert(`${checkboxes.length} Questions Deleted Successfully!`);
-          let selectAllBtn = document.getElementById('selectAllCheckbox');
-          if(selectAllBtn) selectAllBtn.checked = false;
-          loadRoomQuestions();
-      }).catch(err => {
-          alert("Error deleting questions: " + err.message);
-      });
+  if(confirm(`Delete ${checkboxes.length} selected questions?`)) {
+      let promises = [];
+      checkboxes.forEach(chk => { promises.push(db.collection('rooms').doc(currentRoomId).collection('questions').doc(chk.value).delete()); });
+      Promise.all(promises).then(() => { alert("Deleted Successfully!"); let sBtn = document.getElementById('selectAllCheckbox'); if(sBtn) sBtn.checked = false; loadRoomQuestions(); });
   }
 }
 
 // ---------------------------------
-// MCQ DISPLAY & SHUFFLE
+// MCQ DISPLAY
 // ---------------------------------
 function toggleAuthorQuestions(divId) { let el = document.getElementById(divId); if(el.style.display === 'none') { el.style.display = 'block'; if(!openAuthorFolders.includes(divId)) openAuthorFolders.push(divId); } else { el.style.display = 'none'; openAuthorFolders = openAuthorFolders.filter(id => id !== divId); } }
 function filterQuestions() { const query = document.getElementById('searchQuestion').value.toLowerCase(); allCurrentQuestions.forEach(q => { const card = document.getElementById(`q-card-${q.id}`); if(card) { card.style.display = q.question.toLowerCase().includes(query) || (q.topic && q.topic.toLowerCase().includes(query)) ? "block" : "none"; } }); }
@@ -517,11 +455,7 @@ function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer'); container.innerHTML = 'Loading...';
   let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
   db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get().then(snap => {
-    if (snap.empty) { 
-      container.innerHTML = 'No questions found.'; 
-      let bdc = document.getElementById('bulkDeleteContainer'); if(bdc) bdc.style.display = 'none';
-      return; 
-    }
+    if (snap.empty) { container.innerHTML = 'No questions found.'; let bdc = document.getElementById('bulkDeleteContainer'); if(bdc) bdc.style.display = 'none'; return; }
     
     let authorMap = {}; allCurrentQuestions = [];
     snap.forEach(doc => { let q = doc.data(); q.id = doc.id; q.topic = q.topic || 'General'; allCurrentQuestions.push(q);
@@ -529,11 +463,8 @@ function loadRoomQuestions() {
       let author = q.creatorName || "Unknown Author"; if(!authorMap[author]) authorMap[author] = []; authorMap[author].push(q);
     });
 
-    // Show Bulk Delete panel if user is Admin and there are questions
     const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
-    let bdc = document.getElementById('bulkDeleteContainer');
-    if(bdc) bdc.style.display = (isMeAdmin && allCurrentQuestions.length > 0) ? 'flex' : 'none';
-
+    let bdc = document.getElementById('bulkDeleteContainer'); if(bdc) bdc.style.display = (isMeAdmin && allCurrentQuestions.length > 0) ? 'flex' : 'none';
     if(Object.keys(authorMap).length === 0) { container.innerHTML = '<p style="color:#28a745; font-weight:bold;">🎉 All questions attempted!</p>'; return; }
     
     let html = '';
@@ -541,8 +472,7 @@ function loadRoomQuestions() {
       let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`; let isFolderOpen = openAuthorFolders.includes(authorDivId) ? 'block' : 'none';
       html += `<div class="q-card"><h4 style="color:var(--primary-btn); cursor:pointer; font-size:15px; margin:0;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length}) 🔽</h4>
                  <div id="${authorDivId}" style="display: ${isFolderOpen}; margin-top:10px;">${renderQuestionsHTML(authorMap[author], isMeAdmin)}</div></div>`;
-    }
-    container.innerHTML = html;
+    } container.innerHTML = html;
   });
 }
 
@@ -550,25 +480,22 @@ function renderQuestionsHTML(questionsArray, isMeAdmin) {
   let htmlString = ''; 
   questionsArray.forEach((q, index) => {
     let timeBadge = q.timeLimit ? `<span style="background:#ffeeba; color:#856404; padding:2px 5px; border-radius:3px; font-size:11px;">⏳ ${q.timeLimit}s</span>` : '';
-    let controlBtns = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `<div style="margin-bottom:8px;"><button onclick="editQuestion('${q.id}')" style="background:#ffc107; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">✏️ Edit</button> <button onclick="deleteQuestion('${q.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🗑️ Delete</button></div>` : '';
-    
-    // 🌟 Checkbox added for Bulk Delete logic
-    let checkboxHtml = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `<input type="checkbox" class="bulk-delete-chk" value="${q.id}" style="transform:scale(1.2); margin-right:10px; accent-color:#dc3545;">` : '';
-
+    let checkboxHtml = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `<input type="checkbox" class="bulk-delete-chk" value="${q.id}" style="transform:scale(1.2); margin-right:10px; accent-color:#dc3545;" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">` : '';
     let options = [{text: q.optionA, let: 'A'}, {text: q.optionB, let: 'B'}, {text: q.optionC, let: 'C'}, {text: q.optionD, let: 'D'}]; options.sort(() => Math.random() - 0.5); 
-    let optsHtml = ''; options.forEach(o => { optsHtml += `<button id="btn-${q.id}-${o.let}" class="quiz-opt-btn" onclick="checkAnswer('${q.id}', '${o.let}', '${q.correct}')">${o.text}</button>`; });
     
-    htmlString += `<div id="q-card-${q.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;">
-        ${controlBtns}
-        <p style="font-weight:bold; margin-bottom:10px; display:flex; align-items:flex-start;">
-          ${checkboxHtml} <span>Q${index+1}. ${q.question} <span class="topic-badge">${q.topic}</span> ${timeBadge}</span>
-        </p>
+    let optsHtml = ''; 
+    options.forEach(o => { optsHtml += `<button id="btn-${q.id}-${o.let}" class="quiz-opt-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="checkAnswer('${q.id}', '${o.let}', '${q.correct}')">${o.text}</button>`; });
+    
+    let longPressAttrs = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `onmousedown="startLongPress('${q.id}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" ontouchstart="startLongPress('${q.id}')" ontouchend="cancelLongPress()"` : "";
+
+    htmlString += `<div id="q-card-${q.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px; cursor:pointer;" ${longPressAttrs}>
+        <p style="font-weight:bold; margin-bottom:10px; display:flex; align-items:flex-start;">${checkboxHtml} <span>Q${index+1}. ${q.question} <span class="topic-badge">${q.topic}</span> ${timeBadge}</span></p>
         <div id="mcq-options-${q.id}" style="display:flex; flex-direction:column; gap:5px;">${optsHtml}</div><p id="feedback-${q.id}" style="margin-top:10px; font-size:13px; font-weight:bold; display:none;"></p></div>`;
   }); return htmlString;
 }
 
 // ---------------------------------
-// ANSWER & REVISION LOGIC 
+// ANSWER CHECK
 // ---------------------------------
 function checkAnswer(qId, selectedOpt, correctOpt) {
   const btns = document.querySelectorAll(`[id^="btn-${qId}-"]`); btns.forEach(b => b.disabled = true);
@@ -597,9 +524,6 @@ function openRevisionBox() { window.location.hash = '#revision'; }
 function renderRevisionBox() {
   const container = document.getElementById('revisionListContainer');
   if (wrongQuestions.length === 0) { container.innerHTML = '<p>Your revision list is empty!</p>'; return; }
-  let html = '';
-  wrongQuestions.forEach((item, index) => {
-    html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;"><p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${index + 1}</p>${item.html}</div>`;
-  }); container.innerHTML = html;
+  let html = ''; wrongQuestions.forEach((item, index) => { html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;"><p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${index + 1}</p>${item.html}</div>`; }); container.innerHTML = html;
 }
 function updateRevisionCount() { const badge = document.getElementById('revCount'); if(badge) badge.innerText = wrongQuestions.length; }
