@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudyRoom Pro</title>
   <link rel="stylesheet" href="style.css">
-  <!-- FontAwesome for Social Icons -->
+  <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   
   <style>
@@ -37,11 +37,23 @@
       border: 2px solid transparent; transition: 0.2s;
     }
     .round-profile-pic i { font-size: 13px; }
-    .nav-item.active .round-profile-pic { 
-      border-color: var(--primary-btn); background: transparent; color: var(--primary-btn); 
-    }
+    .nav-item.active .round-profile-pic { border-color: var(--primary-btn); background: transparent; color: var(--primary-btn); }
 
-    /* 🌟 PROFILE MENU (BOTTOM SHEET) */
+    /* 🌟 ROOM TOP NAV (FACEBOOK STYLE) */
+    .room-top-nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 60px; background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 15px; z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .room-top-nav .title { font-size: 18px; font-weight: bold; color: var(--primary-btn); display: flex; align-items: center; gap: 15px; }
+    .room-top-nav .actions { display: flex; gap: 20px; align-items: center; }
+    .room-top-nav i { font-size: 20px; color: var(--text-color); cursor: pointer; }
+    .room-content { padding: 75px 15px 20px 15px; } 
+
+    /* 🌟 BOTTOM SHEET MENUS */
     .profile-menu-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.5); z-index: 2000; display: none;
@@ -50,7 +62,7 @@
     .profile-menu-sheet {
       background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0;
       padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
-      animation: slideUp 0.3s ease-out;
+      animation: slideUp 0.2s ease-out;
     }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     
@@ -62,7 +74,8 @@
     .menu-btn i { width: 30px; color: var(--primary-btn); }
     .menu-btn:last-child { border-bottom: none; color: #dc3545; }
     .menu-btn:last-child i { color: #dc3545; }
-    .styled-input { width: 100%; padding: 8px; margin-bottom: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
+    
+    .styled-input { width: 100%; padding: 10px; margin-bottom: 5px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
   </style>
 </head>
 <body>
@@ -72,70 +85,34 @@
     <div id="loginForm">
       <h2 style="color: var(--primary-btn); text-align: center;">StudyRoom Pro</h2>
       <p style="text-align: center; color: var(--text-color); font-size: 14px; margin-bottom: 20px;">Welcome Back!</p>
-      <div class="input-group">
-        <label>Email</label>
-        <input type="email" id="loginEmail" placeholder="Enter your email">
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="Enter password">
-      </div>
+      <div class="input-group"><label>Email</label><input type="email" id="loginEmail" placeholder="Enter your email"></div>
+      <div class="input-group"><label>Password</label><input type="password" id="loginPassword" placeholder="Enter password"></div>
       <button class="btn" onclick="loginUser()">Login</button>
-      <div class="toggle-text" style="margin-top: 10px;">
-        <span onclick="forgotPassword()" style="color: #dc3545; font-size: 13px;">Forgot Password?</span>
-      </div>
-      <div class="toggle-text">
-        Don't have an account? <span onclick="toggleAuth('signup')">Sign Up</span>
-      </div>
+      <div class="toggle-text" style="margin-top: 10px;"><span onclick="forgotPassword()" style="color: #dc3545; font-size: 13px;">Forgot Password?</span></div>
+      <div class="toggle-text">Don't have an account? <span onclick="toggleAuth('signup')">Sign Up</span></div>
     </div>
-
     <div id="signupForm" style="display: none;">
       <h2 style="color: var(--primary-btn); text-align: center;">Create Account</h2>
-      <div class="input-group">
-        <label>Display Name</label>
-        <input type="text" id="signupName" placeholder="E.g., ExamWarrior">
-      </div>
-      <div class="input-group">
-        <label>Email</label>
-        <input type="email" id="signupEmail" placeholder="Enter your email">
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <input type="password" id="signupPassword" placeholder="Create a password">
-      </div>
+      <div class="input-group"><label>Display Name</label><input type="text" id="signupName" placeholder="E.g., ExamWarrior"></div>
+      <div class="input-group"><label>Email</label><input type="email" id="signupEmail" placeholder="Enter your email"></div>
+      <div class="input-group"><label>Password</label><input type="password" id="signupPassword" placeholder="Create a password"></div>
       <button class="btn" onclick="signupUser()">Sign Up</button>
-      <div class="toggle-text">
-        Already have an account? <span onclick="toggleAuth('login')">Login</span>
-      </div>
+      <div class="toggle-text">Already have an account? <span onclick="toggleAuth('login')">Login</span></div>
     </div>
   </div>
 
-  <!-- 🌟 UPGRADED PROFESSIONAL BOTTOM NAVIGATION BAR -->
+  <!-- 🌟 BOTTOM NAVIGATION BAR -->
   <nav id="bottomNavBar" class="bottom-nav" style="display: none;">
-    <div class="nav-item active" id="navHome" onclick="backToDashboard()">
-      <i class="fas fa-home"></i>
-      <span>Home</span>
-    </div>
-    <div class="nav-item" id="navDiscover" onclick="openDiscoverRooms()">
-      <i class="fas fa-compass"></i>
-      <span>Discover</span>
-    </div>
-    <div class="nav-item" id="navRevision" onclick="openRevisionBox()">
-      <i class="fas fa-book-open"></i>
-      <span>Revision</span>
-    </div>
-    <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()">
-      <div class="round-profile-pic"><i class="fas fa-user"></i></div>
-      <span>Profile</span>
-    </div>
+    <div class="nav-item active" id="navHome" onclick="backToDashboard()"><i class="fas fa-home"></i><span>Home</span></div>
+    <div class="nav-item" id="navDiscover" onclick="openDiscoverRooms()"><i class="fas fa-compass"></i><span>Discover</span></div>
+    <div class="nav-item" id="navRevision" onclick="openRevisionBox()"><i class="fas fa-book-open"></i><span>Revision</span></div>
+    <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()"><div class="round-profile-pic"><i class="fas fa-user"></i></div><span>Profile</span></div>
   </nav>
 
-  <!-- PROFILE SETTINGS MENU (BOTTOM SHEET) -->
+  <!-- PROFILE SETTINGS MENU -->
   <div id="profileSettingsModal" class="profile-menu-overlay" onclick="closeProfileMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
-      <div style="text-align: center; margin-bottom: 15px;">
-        <div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div>
-      </div>
+      <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
       <h3 id="menuWelcomeText" style="margin: 0 0 15px 0; color: var(--primary-btn); text-align: center;">Hi, User!</h3>
       <button class="menu-btn" onclick="openProfileScreen()"><i class="fas fa-user-edit"></i> Edit Profile</button>
       <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark / Light Mode</button>
@@ -143,73 +120,60 @@
     </div>
   </div>
 
+  <!-- 🌟 LONG PRESS QUESTION ACTION BOX -->
+  <div id="questionActionModal" class="profile-menu-overlay" onclick="closeQuestionActionBox(event)">
+    <div class="profile-menu-sheet" onclick="event.stopPropagation()">
+      <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
+      <h3 style="margin: 0 0 15px 0; color: var(--text-color); text-align: center; font-size: 16px;">Question Options</h3>
+      <button class="menu-btn" onclick="editLongPressedQuestion()"><i class="fas fa-edit"></i> Edit Question</button>
+      <button class="menu-btn" onclick="deleteLongPressedQuestion()"><i class="fas fa-trash"></i> Delete Question</button>
+    </div>
+  </div>
+
   <!-- DASHBOARD SCREEN -->
   <div class="auth-container" id="dashboardScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: var(--primary-btn); font-size: 22px;">My Dashboard</h2>
-
-    <!-- DAILY GOAL & STREAK TRACKER -->
     <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: center;">
       <h4 style="margin: 0 0 10px 0; color: var(--text-color);">🔥 Your Study Streak: <span id="streakCount" style="color: #ff9800; font-size: 18px;">0 Days</span></h4>
       <p style="font-size: 12px; margin-bottom: 5px;">Daily Goal: Solve 10 Questions</p>
-      <div style="width: 100%; background: #ddd; border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 5px;">
-        <div id="dailyProgressBar" style="width: 0%; height: 100%; background: #28a745; transition: width 0.3s;"></div>
-      </div>
+      <div style="width: 100%; background: #ddd; border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 5px;"><div id="dailyProgressBar" style="width: 0%; height: 100%; background: #28a745; transition: width 0.3s;"></div></div>
       <p style="font-size: 11px; font-weight: bold; margin: 0;"><span id="dailyQuestionsDone">0</span> / 10 Completed Today</p>
     </div>
     
     <div style="padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
       <h3 style="margin-top: 0;">Study Rooms</h3>
       <p style="font-size: 13px; margin-bottom: 15px;">Create or join a private group.</p>
-      
       <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
         <button class="btn" style="width: auto; padding: 10px 20px;" onclick="openCreateRoom()">➕ Create</button>
         <button class="btn" style="width: auto; padding: 10px 20px; background-color: #28a745;" onclick="openJoinRoom()">🤝 Join</button>
       </div>
 
-      <!-- CREATE ROOM BOX -->
       <div id="createRoomBox" style="display: none; padding: 15px; border: 1px dashed var(--primary-btn); border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
         <h4 style="color: var(--primary-btn); margin-top:0;">Create a New Room</h4>
-        <input type="text" id="newRoomName" placeholder="Room Name (e.g. Target 2026)" class="styled-input">
-        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text-color);">
-          <input type="checkbox" id="isRoomPublicToggle"> 🌍 Make this room Public (Visible in Discover)
-        </label>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn" style="padding: 8px; margin-top: 5px;" onclick="saveRoomToFirebase()">Save</button>
-          <button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeCreateRoom()">Cancel</button>
-        </div>
+        <input type="text" id="newRoomName" placeholder="Room Name" class="styled-input">
+        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text-color);"><input type="checkbox" id="isRoomPublicToggle"> 🌍 Make this room Public (Visible in Discover)</label>
+        <div style="display: flex; gap: 10px;"><button class="btn" style="padding: 8px; margin-top: 5px;" onclick="saveRoomToFirebase()">Save</button><button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeCreateRoom()">Cancel</button></div>
       </div>
 
-      <!-- JOIN ROOM BOX -->
       <div id="joinRoomBox" style="display: none; padding: 15px; border: 1px dashed #28a745; border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
         <h4 style="color: #28a745; margin-top:0;">Join by Room ID</h4>
         <input type="text" id="joinRoomIdInput" placeholder="Paste Room ID here" class="styled-input">
-        <div style="display: flex; gap: 10px;">
-          <button class="btn" style="padding: 8px; margin-top: 5px; background-color: #28a745;" onclick="joinRoomByFirebase()">Join</button>
-          <button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeJoinRoom()">Cancel</button>
-        </div>
+        <div style="display: flex; gap: 10px;"><button class="btn" style="padding: 8px; margin-top: 5px; background-color: #28a745;" onclick="joinRoomByFirebase()">Join</button><button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeJoinRoom()">Cancel</button></div>
       </div>
     </div>
-
-    <div style="margin-top: 20px;">
-      <h3>My Rooms</h3>
-      <div id="roomsListContainer" style="margin-top:10px;">Loading rooms...</div>
-    </div>
+    <div style="margin-top: 20px;"><h3>My Rooms</h3><div id="roomsListContainer" style="margin-top:10px;">Loading rooms...</div></div>
   </div>
 
   <!-- DISCOVER ROOMS SCREEN -->
   <div class="auth-container" id="discoverScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: #17a2b8; font-size: 22px;">🌍 Discover Public Rooms</h2>
-    <div class="input-group" style="margin-bottom: 10px;">
-      <input type="text" id="searchPublicRoom" placeholder="🔍 Search room names..." onkeyup="filterPublicRooms()" class="styled-input">
-    </div>
+    <div class="input-group" style="margin-bottom: 10px;"><input type="text" id="searchPublicRoom" placeholder="🔍 Search room names..." onkeyup="filterPublicRooms()" class="styled-input"></div>
     <div id="publicRoomsListContainer" style="font-size: 13px;">Loading public rooms...</div>
   </div>
 
   <!-- REVISION SCREEN -->
   <div class="auth-container" id="revisionScreen" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
-      <h2 style="margin: 0; color: #dc3545; font-size: 22px;">📖 Revision List</h2>
-    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;"><h2 style="margin: 0; color: #dc3545; font-size: 22px;">📖 Revision List</h2></div>
     <div id="revisionListContainer">No wrong answers saved yet!</div>
   </div>
 
@@ -226,87 +190,96 @@
     <button class="btn" style="background-color: #28a745;" onclick="saveProfileData()">💾 Save Changes</button>
   </div>
 
-  <!-- ROOM VIEW SCREEN -->
-  <div class="auth-container" id="roomViewScreen" style="display: none; position: relative;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border-color);">
-      <h2 id="roomTitleText" style="margin: 0; color: var(--primary-btn); font-size: 20px;">Room Name</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
-    </div>
+  <!-- 🌟 ROOM VIEW SCREEN (NEW FACEBOOK STYLE UI) -->
+  <div id="roomViewScreen" style="display: none; padding: 0;">
     
-    <!-- ROOM CONTROLS -->
-    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ff9800; color: white;" onclick="openLeaderboard()">🏆 Leaderboard</button>
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #28a745;" onclick="openShareModal()">🔗 Share Invite</button>
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #17a2b8;" onclick="copyRoomId()">📋 Copy ID</button>
-      <button class="btn" id="editRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #ffc107; color: black; display: none;" onclick="openEditRoom()">⚙️ Settings</button>
-      <button class="btn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #dc3545;" onclick="leaveRoom()">🚪 Leave</button>
-      <button class="btn" id="deleteRoomBtn" style="width: auto; padding: 8px 12px; font-size: 12px; background-color: #8b0000; display: none;" onclick="deleteRoom()">🗑️ Delete</button>
-    </div>
-
-    <!-- LEADERBOARD MODAL -->
-    <div id="leaderboardModal" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid #ff9800; background: var(--bg-color); margin-bottom: 20px;">
-      <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Room Leaderboard</h3>
-      <div id="leaderboardList" style="margin-top: 15px; font-size: 14px;">Loading ranks...</div>
-      <button class="btn" style="padding: 6px; margin-top: 15px; background: #6c757d;" onclick="closeLeaderboard()">Close</button>
-    </div>
-
-    <!-- SHARE MODAL -->
-    <div id="shareModal" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); margin-bottom: 20px; text-align: center;">
-      <h4 style="margin-top: 0; margin-bottom: 15px;">Share Invite Link</h4>
-      <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
-        <button onclick="shareViaWhatsApp()" style="background:#25D366; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>
-        <button onclick="shareViaFacebook()" style="background:#1877F2; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-facebook-f"></i></button>
-        <button onclick="shareViaTwitter()" style="background:#1DA1F2; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-twitter"></i></button>
-        <button onclick="copyInviteLink()" style="background:#6c757d; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fas fa-copy"></i></button>
+    <!-- TOP NAVBAR FIXED -->
+    <div class="room-top-nav">
+      <div class="title"><i class="fas fa-arrow-left" onclick="backToDashboard()"></i> <span id="roomTitleText">Room Name</span></div>
+      <div class="actions">
+        <i class="fas fa-share-alt" style="color: #28a745;" onclick="openShareModal()"></i>
+        <i class="fas fa-ellipsis-v" onclick="openRoomMenuModal()"></i>
       </div>
-      <input type="text" id="shareLinkInput" readonly class="styled-input" style="text-align: center; font-size: 12px;">
-      <button class="btn" style="padding: 6px; margin-top: 5px; background: #dc3545;" onclick="closeShareModal()">Close</button>
     </div>
 
-    <!-- SETTINGS BOX -->
-    <div id="editRoomBox" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid #ffc107; margin-bottom: 20px;">
-      <h4>Room Settings</h4>
+    <div class="room-content">
+      
+      <!-- ADD MCQ MAIN BUTTON -->
+      <button id="addMcqMainBtn" class="btn" style="width: 100%; font-size: 16px; padding: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="openAddMcqChoiceModal()">➕ Add New MCQ</button>
+
+      <!-- LEADERBOARD BUTTON -->
+      <button class="btn" style="width: 100%; background: #ff9800; color: white; margin-bottom: 15px;" onclick="openLeaderboard()">🏆 View Room Leaderboard</button>
+
+      <!-- SEARCH BAR -->
+      <div class="input-group">
+        <input type="text" id="searchQuestion" placeholder="🔍 Search questions or topics..." onkeyup="filterQuestions()" class="styled-input">
+      </div>
+
+      <!-- BULK DELETE CONTROLS -->
+      <div id="bulkDeleteContainer" style="display: none; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px;">
+        <label style="font-weight:bold; cursor:pointer; color:var(--text-color); font-size:14px;">
+          <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" style="transform:scale(1.3); margin-right:8px; accent-color:#dc3545;"> Select All
+        </label>
+        <button class="btn" style="width:auto; padding:6px 12px; background-color:#dc3545; font-size:12px; margin:0;" onclick="deleteSelectedQuestions()">🗑️ Delete Selected</button>
+      </div>
+
+      <h3 style="margin-bottom:10px;">Practice Quiz</h3>
+      <p style="font-size:11px; color:#888; margin-top:-5px; margin-bottom:15px;">* Admin can long-press a question to Edit or Delete.</p>
+      
+      <div id="questionsListContainer">Loading questions...</div>
+    </div>
+  </div>
+
+  <!-- 🌟 ROOM MENU (BOTTOM SHEET) -->
+  <div id="roomMenuModal" class="profile-menu-overlay" onclick="closeRoomMenuModal(event)">
+    <div class="profile-menu-sheet" onclick="event.stopPropagation()">
+      <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
+      <h3 style="margin: 0 0 15px 0; color: var(--text-color); text-align: center;">Room Options</h3>
+      <button class="menu-btn" onclick="openMembersModal()"><i class="fas fa-users"></i> View Members</button>
+      <button class="menu-btn" onclick="copyRoomId()"><i class="fas fa-copy"></i> Copy Room ID</button>
+      <button class="menu-btn" id="editRoomMenuBtn" onclick="openEditRoomBox()"><i class="fas fa-cog"></i> Room Settings</button>
+      <button class="menu-btn" onclick="leaveRoom()"><i class="fas fa-sign-out-alt"></i> Leave Room</button>
+      <button class="menu-btn" id="deleteRoomMenuBtn" onclick="deleteRoom()"><i class="fas fa-trash"></i> Delete Room</button>
+    </div>
+  </div>
+
+  <!-- 🌟 ADD MCQ CHOICE MODAL -->
+  <div id="addMcqChoiceModal" class="profile-menu-overlay" onclick="closeAddMcqChoiceModal(event)">
+    <div class="profile-menu-sheet" onclick="event.stopPropagation()">
+      <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
+      <h3 style="margin: 0 0 15px 0; color: var(--text-color); text-align: center;">How to add MCQ?</h3>
+      <button class="menu-btn" onclick="openManualAddBox()"><i class="fas fa-keyboard"></i> Type Manually</button>
+      <button class="menu-btn" onclick="openCsvUploadBox()"><i class="fas fa-file-csv"></i> Upload CSV File</button>
+    </div>
+  </div>
+
+  <!-- FULL SCREEN OVERLAYS FOR ROOM SETTINGS, MEMBERS & ADDING QUESTIONS -->
+  
+  <!-- MEMBERS MODAL -->
+  <div id="membersModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeMembersModal(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
+      <h3 style="color: var(--primary-btn); margin-top:0;">👥 Room Members</h3>
+      <div id="membersListContainer" style="font-size:13px; margin-top: 15px;">Loading...</div>
+      <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeMembersModal()">Close</button>
+    </div>
+  </div>
+
+  <!-- ROOM SETTINGS BOX -->
+  <div id="editRoomBox" class="profile-menu-overlay" style="align-items: center;" onclick="closeEditRoomBox(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
+      <h3 style="color: var(--primary-btn); margin-top:0;">⚙️ Room Settings</h3>
       <input type="text" id="editRoomNameInput" class="styled-input" style="margin-top: 10px;">
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="editRoomAdminOnlyToggle"> Admins only MCQ</label>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="editRoomPublicToggle"> 🌍 Public Room (Visible in Discover)</label>
-      <button class="btn" style="background:#28a745;" onclick="saveRoomEdit()">Update</button>
-      <button class="btn" style="background:#666;" onclick="closeEditRoom()">Cancel</button>
+      <button class="btn" style="background:#28a745; margin-top:15px;" onclick="saveRoomEdit()">Update Settings</button>
+      <button class="btn" style="background:#666;" onclick="closeEditRoomBox()">Cancel</button>
     </div>
+  </div>
 
-    <!-- MEMBERS LIST -->
-    <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px;">
-      <h4>👥 Members</h4>
-      <div id="membersListContainer" style="margin-top:10px; font-size:13px;">Loading members...</div>
-    </div>
-
-    <!-- SEARCH BAR -->
-    <div class="input-group">
-      <input type="text" id="searchQuestion" placeholder="🔍 Search questions or topics..." onkeyup="filterQuestions()" class="styled-input">
-    </div>
-
-    <!-- ADD MCQ BUTTONS -->
-    <div id="addMcqBtnContainer" style="padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 20px;">
-      <button class="btn" style="width: auto; padding: 10px 20px; margin-bottom: 10px;" onclick="openAddQuestionBox()">➕ Add MCQ Manually</button>
-      
-      <div style="padding: 15px; border: 1px dashed #28a745; border-radius: 8px; margin-top: 10px; text-align: center; background: var(--bg-color);">
-        <h4 style="color:#28a745; margin-bottom: 10px;">📁 Bulk Upload (CSV)</h4>
-        
-        <!-- 🌟 UPDATE 3.2: CSV TOPIC INPUT -->
-        <input type="text" id="csvTopic" placeholder="Enter Topic for these questions (e.g. English Grammar)" class="styled-input" style="border: 1px solid #28a745; margin-bottom: 10px; text-align: center;">
-
-        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 11px;">
-          <p style="margin:0 0 5px 0; color:var(--text-color);"><b>CSV Format (6 Columns Required):</b></p>
-          <code style="background:var(--bg-color); padding:4px; border-radius:4px; display:block; margin-bottom:5px; color:#d63384;">Question, Option A, Option B, Option C, Option D, Correct (A/B/C/D)</code>
-        </div>
-        
-        <input type="file" id="csv-file" accept=".csv" style="width:100%; margin-top:5px; padding: 8px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
-        <button class="btn" style="background-color: #ff9800; padding:8px 15px; margin-top: 10px;" onclick="uploadCSV()">🚀 Upload Questions</button>
-      </div>
-    </div>
-
-    <!-- MANUAL ADD BOX -->
-    <div id="addQuestionBox" style="display: none; padding: 15px; border-radius: 8px; border: 1px solid var(--primary-btn); margin-bottom: 20px;">
-      <h4 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-bottom: 10px;">New Question</h4>
+  <!-- MANUAL ADD QUESTION BOX -->
+  <div id="addQuestionBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeManualAddBox(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+      <h3 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-top: 0;">✍️ New Question</h3>
       <input type="text" id="queTopic" placeholder="Topic (e.g. History)" class="styled-input">
       <input type="text" id="queText" placeholder="Question text" class="styled-input">
       <input type="text" id="optA" placeholder="Option A" class="styled-input">
@@ -315,23 +288,47 @@
       <input type="text" id="optD" placeholder="Option D" class="styled-input">
       <input type="text" id="correctOpt" placeholder="Correct Answer (A/B/C/D)" class="styled-input">
       <input type="number" id="queTime" placeholder="Time limit (Optional)" class="styled-input">
-      <button class="btn" id="saveQuestionBtn" onclick="saveQuestionToFirebase()">Save Question</button>
-      <button class="btn" style="background:#6c757d;" onclick="closeAddQuestionBox()">Cancel</button>
+      <button class="btn" id="saveQuestionBtn" onclick="saveQuestionToFirebase()" style="margin-top: 10px;">Save Question</button>
+      <button class="btn" style="background:#6c757d;" onclick="closeManualAddBox()">Cancel</button>
     </div>
+  </div>
 
-    <!-- QUESTIONS LIST -->
-    <div>
-      <h3 style="margin-bottom:10px;">Practice Quiz by Authors</h3>
-
-      <!-- 🌟 UPDATE 3.2: BULK DELETE CONTROLS -->
-      <div id="bulkDeleteContainer" style="display: none; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px solid #dc3545; margin-bottom: 15px;">
-        <label style="font-weight:bold; cursor:pointer; color:var(--text-color); font-size:14px;">
-          <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" style="transform:scale(1.3); margin-right:8px; accent-color:#dc3545;"> Select All
-        </label>
-        <button class="btn" style="width:auto; padding:6px 12px; background-color:#dc3545; font-size:12px; margin:0;" onclick="deleteSelectedQuestions()">🗑️ Delete Selected</button>
+  <!-- CSV UPLOAD BOX -->
+  <div id="csvUploadBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeCsvUploadBox(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
+      <h3 style="color:#28a745; margin-top: 0;">📁 Bulk Upload (CSV)</h3>
+      <input type="text" id="csvTopic" placeholder="Enter Topic (e.g. Grammar)" class="styled-input" style="border: 1px solid #28a745; text-align: center;">
+      <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 11px;">
+        <p style="margin:0 0 5px 0; color:var(--text-color);"><b>CSV Format (6 Columns Required):</b></p>
+        <code style="background:var(--card-bg); padding:4px; border-radius:4px; display:block; margin-bottom:5px; color:#d63384;">Question, Option A, Option B, Option C, Option D, Correct (A/B/C/D)</code>
       </div>
+      <input type="file" id="csv-file" accept=".csv" style="width:100%; padding: 8px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
+      <button class="btn" style="background-color: #ff9800; margin-top: 15px;" onclick="uploadCSV()">🚀 Upload Questions</button>
+      <button class="btn" style="background:#6c757d;" onclick="closeCsvUploadBox()">Cancel</button>
+    </div>
+  </div>
 
-      <div id="questionsListContainer">Loading questions...</div>
+  <!-- LEADERBOARD MODAL -->
+  <div id="leaderboardModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeLeaderboard(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y:auto;" onclick="event.stopPropagation()">
+      <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Room Leaderboard</h3>
+      <div id="leaderboardList" style="margin-top: 15px; font-size: 14px;">Loading ranks...</div>
+      <button class="btn" style="padding: 6px; margin-top: 15px; background: #6c757d;" onclick="closeLeaderboard()">Close</button>
+    </div>
+  </div>
+
+  <!-- SHARE MODAL -->
+  <div id="shareModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeShareModal(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; text-align: center;" onclick="event.stopPropagation()">
+      <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-color);">Share Invite Link</h3>
+      <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
+        <button onclick="shareViaWhatsApp()" style="background:#25D366; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>
+        <button onclick="shareViaFacebook()" style="background:#1877F2; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-facebook-f"></i></button>
+        <button onclick="shareViaTwitter()" style="background:#1DA1F2; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fab fa-twitter"></i></button>
+        <button onclick="copyInviteLink()" style="background:#6c757d; color:white; border:none; padding:10px; border-radius:50%; width:40px; height:40px; cursor:pointer;"><i class="fas fa-copy"></i></button>
+      </div>
+      <input type="text" id="shareLinkInput" readonly class="styled-input" style="text-align: center; font-size: 12px;">
+      <button class="btn" style="padding: 6px; margin-top: 15px; background: #dc3545;" onclick="closeShareModal()">Close</button>
     </div>
   </div>
 
@@ -340,9 +337,7 @@
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
       <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
       <p style="font-weight: bold;">@<span id="viewProfileUsername">username</span></p>
-      <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px; background: var(--bg-color);">
-        <p style="margin:0;"><strong>Bio:</strong> <span id="viewProfileBio"></span></p>
-      </div>
+      <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px; background: var(--bg-color);"><p style="margin:0;"><strong>Bio:</strong> <span id="viewProfileBio"></span></p></div>
       <button class="btn" style="background: #6c757d; margin-top: 15px;" onclick="closeViewProfile()">Close</button>
     </div>
   </div>
