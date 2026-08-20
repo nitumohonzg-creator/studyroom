@@ -84,14 +84,15 @@ function openProfileMenuModal() {
 }
 
 function closeProfileMenuModal(event) {
-  if(event && event.target.classList.contains('profile-menu-sheet')) return; // Don't close if clicked inside sheet
-  document.getElementById('profileSettingsModal').style.display = 'none';
+  if(event && event.target.classList.contains('profile-menu-sheet')) return; 
+  let m = document.getElementById('profileSettingsModal');
+  if(m) m.style.display = 'none';
 }
 
 function updateBottomNav(activeId) {
   const navBar = document.getElementById('bottomNavBar');
   if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId)) {
-    if(navBar) navBar.style.display = 'none'; // Hide in auth screen and room view
+    if(navBar) navBar.style.display = 'none'; 
     return;
   }
   
@@ -109,7 +110,7 @@ function updateBottomNav(activeId) {
 // -------------------------------
 if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 function toggleDarkMode() {
-  closeProfileMenuModal(); // Close menu when toggled
+  closeProfileMenuModal();
   if(document.documentElement.getAttribute('data-theme') === 'dark') {
     document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme', 'light');
   } else {
@@ -176,8 +177,8 @@ function updateLeaderboardScore() {
       let name = doc.exists ? doc.data().displayName : "Unknown User";
       db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({
           name: name, score: firebase.firestore.FieldValue.increment(1)
-      }, { merge: true }).catch(e => console.error("Score Error:", e));
-  }).catch(e => console.error("User fetch error:", e));
+      }, { merge: true }).catch(e => console.error(e));
+  }).catch(e => console.error(e));
 }
 
 function openLeaderboard() {
@@ -253,7 +254,7 @@ function viewUserProfile(uid) {
 function closeViewProfile() { document.getElementById('viewProfileModal').style.display = 'none'; }
 
 // -------------------------------
-// 🌍 DISCOVERY LOGIC (Via Bottom Nav)
+// 🌍 DISCOVERY LOGIC
 // -------------------------------
 function openDiscoverRooms() { window.location.hash = '#discover'; }
 
@@ -280,7 +281,7 @@ function loadDiscoverRooms() {
                  </div>`;
       });
       container.innerHTML = html;
-    }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error: ${err.message}</span>`; });
+    }).catch(err => { container.innerHTML = `<span style="color:#dc3545; font-size:12px;">❌ Error</span>`; });
   } catch(e) { }
 }
 
@@ -440,7 +441,7 @@ function editQuestion(qId) {
     editingQuestionId = qId; document.getElementById('addQuestionBoxTitle').innerText = "Edit Question"; document.getElementById('saveQuestionBtn').innerText = "Update"; document.getElementById('addQuestionBox').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
-function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => { alert("Deleted!"); const card = document.getElementById(`q-card-${qId}`); if(card) card.style.display = 'none'; }); }
+function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => { alert("Deleted!"); loadRoomQuestions(); }); }
 
 function saveQuestionToFirebase() {
   const qData = { topic: document.getElementById('queTopic').value.trim() || 'General', question: document.getElementById('queText').value.trim(), optionA: document.getElementById('optA').value.trim(), optionB: document.getElementById('optB').value.trim(), optionC: document.getElementById('optC').value.trim(), optionD: document.getElementById('optD').value.trim(), correct: document.getElementById('correctOpt').value.trim().toUpperCase(), timeLimit: document.getElementById('queTime').value.trim() || null };
@@ -448,19 +449,62 @@ function saveQuestionToFirebase() {
   if (editingQuestionId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData).then(() => { alert("Updated!"); closeAddQuestionBox(); loadRoomQuestions(); });
   } else { db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown"; qData.creatorUid = auth.currentUser.uid; qData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection('rooms').doc(currentRoomId).collection('questions').add(qData).then(() => { alert("Added!"); closeAddQuestionBox(); loadRoomQuestions(); }); }); }
 }
+
+// 🌟 UPDATE 3.2: Custom Topic implementation
 function uploadCSV() {
   const file = document.getElementById('csv-file').files[0]; if (!file) return alert("Select CSV!");
+  const topicInput = document.getElementById('csvTopic');
+  const customTopic = topicInput && topicInput.value.trim() ? topicInput.value.trim() : 'General';
+
   const reader = new FileReader(); reader.onload = function(e) {
     const rows = e.target.result.split('\n'); let count = 0;
     db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => {
       const creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown";
       for (let i = 1; i < rows.length; i++) {
         const cols = rows[i].trim().split(','); 
-        if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: 'General', question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: creatorName, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); count++; }
+        if (cols.length >= 6) { 
+          db.collection('rooms').doc(currentRoomId).collection('questions').add({ 
+            topic: customTopic, // Assign custom topic from input
+            question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), 
+            creatorName: creatorName, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+          }); 
+          count++; 
+        }
       }
-      alert(`Uploaded ${count} questions!`); document.getElementById('csv-file').value = ""; loadRoomQuestions(); 
+      alert(`Uploaded ${count} questions under topic "${customTopic}"!`); document.getElementById('csv-file').value = ""; loadRoomQuestions(); 
     });
   }; reader.readAsText(file);
+}
+
+// ---------------------------------
+// 🌟 UPDATE 3.2: BULK DELETE LOGIC
+// ---------------------------------
+function toggleSelectAll() {
+  const isChecked = document.getElementById('selectAllCheckbox').checked;
+  const checkboxes = document.querySelectorAll('.bulk-delete-chk');
+  checkboxes.forEach(chk => chk.checked = isChecked);
+}
+
+function deleteSelectedQuestions() {
+  const checkboxes = document.querySelectorAll('.bulk-delete-chk:checked');
+  if (checkboxes.length === 0) return alert("Select at least one question to delete.");
+  
+  if(confirm(`Are you sure you want to delete ${checkboxes.length} selected questions?`)) {
+      let deletePromises = [];
+      checkboxes.forEach(chk => {
+          let qId = chk.value;
+          deletePromises.push(db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete());
+      });
+
+      Promise.all(deletePromises).then(() => {
+          alert(`${checkboxes.length} Questions Deleted Successfully!`);
+          let selectAllBtn = document.getElementById('selectAllCheckbox');
+          if(selectAllBtn) selectAllBtn.checked = false;
+          loadRoomQuestions();
+      }).catch(err => {
+          alert("Error deleting questions: " + err.message);
+      });
+  }
 }
 
 // ---------------------------------
@@ -473,32 +517,52 @@ function loadRoomQuestions() {
   const container = document.getElementById('questionsListContainer'); container.innerHTML = 'Loading...';
   let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
   db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get().then(snap => {
-    if (snap.empty) { container.innerHTML = 'No questions found.'; return; }
+    if (snap.empty) { 
+      container.innerHTML = 'No questions found.'; 
+      let bdc = document.getElementById('bulkDeleteContainer'); if(bdc) bdc.style.display = 'none';
+      return; 
+    }
+    
     let authorMap = {}; allCurrentQuestions = [];
     snap.forEach(doc => { let q = doc.data(); q.id = doc.id; q.topic = q.topic || 'General'; allCurrentQuestions.push(q);
       if(attemptedList.includes(q.id)) return;
       let author = q.creatorName || "Unknown Author"; if(!authorMap[author]) authorMap[author] = []; authorMap[author].push(q);
     });
+
+    // Show Bulk Delete panel if user is Admin and there are questions
+    const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
+    let bdc = document.getElementById('bulkDeleteContainer');
+    if(bdc) bdc.style.display = (isMeAdmin && allCurrentQuestions.length > 0) ? 'flex' : 'none';
+
     if(Object.keys(authorMap).length === 0) { container.innerHTML = '<p style="color:#28a745; font-weight:bold;">🎉 All questions attempted!</p>'; return; }
+    
     let html = '';
     for(let author in authorMap) {
       let authorDivId = `author-section-${author.replace(/\s+/g, '_')}`; let isFolderOpen = openAuthorFolders.includes(authorDivId) ? 'block' : 'none';
       html += `<div class="q-card"><h4 style="color:var(--primary-btn); cursor:pointer; font-size:15px; margin:0;" onclick="toggleAuthorQuestions('${authorDivId}')">📁 MCQ by ${author} (${authorMap[author].length}) 🔽</h4>
-                 <div id="${authorDivId}" style="display: ${isFolderOpen}; margin-top:10px;">${renderQuestionsHTML(authorMap[author])}</div></div>`;
+                 <div id="${authorDivId}" style="display: ${isFolderOpen}; margin-top:10px;">${renderQuestionsHTML(authorMap[author], isMeAdmin)}</div></div>`;
     }
     container.innerHTML = html;
   });
 }
 
-function renderQuestionsHTML(questionsArray) {
-  let htmlString = ''; const isMeAdmin = currentRoomAdmins.includes(auth.currentUser.uid);
+function renderQuestionsHTML(questionsArray, isMeAdmin) {
+  let htmlString = ''; 
   questionsArray.forEach((q, index) => {
     let timeBadge = q.timeLimit ? `<span style="background:#ffeeba; color:#856404; padding:2px 5px; border-radius:3px; font-size:11px;">⏳ ${q.timeLimit}s</span>` : '';
     let controlBtns = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `<div style="margin-bottom:8px;"><button onclick="editQuestion('${q.id}')" style="background:#ffc107; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">✏️ Edit</button> <button onclick="deleteQuestion('${q.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🗑️ Delete</button></div>` : '';
+    
+    // 🌟 Checkbox added for Bulk Delete logic
+    let checkboxHtml = (q.creatorUid === auth.currentUser.uid || isMeAdmin) ? `<input type="checkbox" class="bulk-delete-chk" value="${q.id}" style="transform:scale(1.2); margin-right:10px; accent-color:#dc3545;">` : '';
+
     let options = [{text: q.optionA, let: 'A'}, {text: q.optionB, let: 'B'}, {text: q.optionC, let: 'C'}, {text: q.optionD, let: 'D'}]; options.sort(() => Math.random() - 0.5); 
     let optsHtml = ''; options.forEach(o => { optsHtml += `<button id="btn-${q.id}-${o.let}" class="quiz-opt-btn" onclick="checkAnswer('${q.id}', '${o.let}', '${q.correct}')">${o.text}</button>`; });
+    
     htmlString += `<div id="q-card-${q.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;">
-        ${controlBtns}<p style="font-weight:bold; margin-bottom:10px;">Q${index+1}. ${q.question} <span class="topic-badge">${q.topic}</span> ${timeBadge}</p>
+        ${controlBtns}
+        <p style="font-weight:bold; margin-bottom:10px; display:flex; align-items:flex-start;">
+          ${checkboxHtml} <span>Q${index+1}. ${q.question} <span class="topic-badge">${q.topic}</span> ${timeBadge}</span>
+        </p>
         <div id="mcq-options-${q.id}" style="display:flex; flex-direction:column; gap:5px;">${optsHtml}</div><p id="feedback-${q.id}" style="margin-top:10px; font-size:13px; font-weight:bold; display:none;"></p></div>`;
   }); return htmlString;
 }
