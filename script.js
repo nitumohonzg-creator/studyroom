@@ -17,9 +17,9 @@ let currentRoomId = null, currentRoomName = null, currentRoomCreator = null, cur
 let currentRoomAdminOnlyMCQ = false, currentRoomIsPublic = false, editingQuestionId = null;
 let openAuthorFolders = [], openTopicFolders = [], allCurrentQuestions = [];
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
-let correctQuestions = JSON.parse(localStorage.getItem('studyRoomCorrect')) || []; // 🌟 NEW: Solved Archive
+let correctQuestions = JSON.parse(localStorage.getItem('studyRoomCorrect')) || []; 
 let allPublicRooms = []; 
-let selectedQuestionIds = []; // 🌟 NEW: For Bulk Selection
+let selectedQuestionIds = []; 
 
 updateRevisionCount(); checkDailyStreak(); 
 
@@ -82,7 +82,7 @@ function deleteLongPressedQuestion() { closeQuestionActionBox(); deleteQuestion(
 if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 function toggleDarkMode() { closeProfileMenuModal(); if(document.documentElement.getAttribute('data-theme') === 'dark') { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme', 'light'); } else { document.documentElement.setAttribute('data-theme', 'dark'); localStorage.setItem('theme', 'dark'); } }
 
-// 🌟 SMART ROUTING (Added Solved Screen)
+// 🌟 SMART ROUTING 
 function hideAllScreens() { ['authBox','dashboardScreen','discoverScreen','revisionScreen','profileScreen','roomViewScreen','solvedQuestionsScreen'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; }); closeProfileMenuModal(); closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); }
 window.addEventListener('hashchange', handleHashChange);
 function handleHashChange() {
@@ -92,13 +92,13 @@ function handleHashChange() {
   if (hash === '#dashboard' || hash === '') { document.getElementById('dashboardScreen').style.display = 'block'; loadMyRooms(); checkDailyStreak(); updateBottomNav('navHome'); } 
   else if (hash === '#discover') { document.getElementById('discoverScreen').style.display = 'block'; loadDiscoverRooms(); updateBottomNav('navDiscover'); } 
   else if (hash === '#revision') { document.getElementById('revisionScreen').style.display = 'block'; renderRevisionBox(); updateBottomNav('navRevision'); } 
-  else if (hash === '#solved') { document.getElementById('solvedQuestionsScreen').style.display = 'block'; renderSolvedQuestions(); updateBottomNav(); } // 🌟 NEW 
+  else if (hash === '#solved') { document.getElementById('solvedQuestionsScreen').style.display = 'block'; renderSolvedQuestions(); updateBottomNav(); } 
   else if (hash === '#profile') { document.getElementById('profileScreen').style.display = 'block'; updateBottomNav('navProfile'); } 
   else if (hash === '#room' && currentRoomId) { document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); } else { window.location.hash = '#dashboard'; }
 }
 auth.onAuthStateChanged((user) => { if (user) { db.collection('users').doc(user.uid).get().then(() => { let p = localStorage.getItem('pendingJoin'); if (p) { localStorage.removeItem('pendingJoin'); document.getElementById('joinRoomIdInput').value = p; joinRoomByFirebase(); } else { handleHashChange(); } }); } else { window.location.hash = ''; handleHashChange(); } });
 
-// AUTH, LEADERBOARD, DISCOVER, CREATE ROOM (Kept Same for brevity)
+// AUTH & UTILS (Kept Same)
 function openLeaderboard() { let m = document.getElementById('leaderboardModal'), c = document.getElementById('leaderboardList'); if(!m || !c) return; m.style.display = 'flex'; c.innerHTML = "Loading..."; db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => { if(snap.empty) { c.innerHTML = "No scores yet."; return; } let html = '', rank = 1; snap.forEach(doc => { let d = doc.data(), medal = rank===1?'🥇':(rank===2?'🥈':(rank===3?'🥉':'🏅')); html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);"><span>${medal} <b>${d.name||'User'}</b></span><span style="color:#28a745; font-weight:bold;">${d.score||0} pts</span></div>`; rank++; }); c.innerHTML = html; }).catch(e => { c.innerHTML = `❌ Error`; }); }
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 function updateLeaderboardScore() { if(!auth.currentUser || !currentRoomId) return; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({ name: doc.data().displayName||"Unknown", score: firebase.firestore.FieldValue.increment(1) }, { merge: true }); }); }
@@ -153,7 +153,7 @@ function removeAdminRole(uid) { if(confirm("Remove Admin?")) db.collection('room
 function removeMember(uid) { if(confirm("Kick member?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(uid), admins: firebase.firestore.FieldValue.arrayRemove(uid) }).then(() => loadRoomMembers()); }
 
 // ---------------------------------
-// 🌟 BULK ACTIONS & FLOATING BAR (UPDATE 4.0)
+// 🌟 BULK ACTIONS & FLOATING BAR 
 // ---------------------------------
 function handleCheckboxChange(cb) {
   if(cb.checked) { if(!selectedQuestionIds.includes(cb.value)) selectedQuestionIds.push(cb.value); } 
@@ -169,12 +169,25 @@ function updateSelectionBar() {
 
 function clearSelection() { selectedQuestionIds = []; document.querySelectorAll('.bulk-delete-chk').forEach(c => c.checked = false); updateSelectionBar(); }
 
-function toggleSelectAll() { 
-  const isChecked = !document.querySelector('.bulk-delete-chk:not(:checked)'); // Toggle logic
-  document.querySelectorAll('.bulk-delete-chk').forEach(c => {
-    c.checked = !isChecked; if(!isChecked && !selectedQuestionIds.includes(c.value)) selectedQuestionIds.push(c.value);
-    else if(isChecked) selectedQuestionIds = selectedQuestionIds.filter(id => id !== c.value);
-  }); updateSelectionBar(); 
+// 🌟 UPDATE 4.1: TOPIC-WISE SELECT ALL LOGIC
+function toggleSelectTopic(topicId) {
+    const container = document.getElementById(topicId);
+    if(!container) return;
+    const checkboxes = container.querySelectorAll('.bulk-delete-chk');
+    if(checkboxes.length === 0) return;
+
+    let allChecked = true;
+    checkboxes.forEach(c => { if(!c.checked) allChecked = false; });
+
+    checkboxes.forEach(c => {
+        c.checked = !allChecked;
+        if(!allChecked && !selectedQuestionIds.includes(c.value)) {
+            selectedQuestionIds.push(c.value);
+        } else if(allChecked) {
+            selectedQuestionIds = selectedQuestionIds.filter(id => id !== c.value);
+        }
+    });
+    updateSelectionBar();
 }
 
 function deleteSelectedQuestions() {
@@ -207,7 +220,7 @@ function saveQuestionToFirebase(isAddNext) {
 function uploadCSV() { const f = document.getElementById('csv-file').files[0]; if (!f) return alert("Select CSV!"); const ti = document.getElementById('csvTopic'), ct = ti && ti.value.trim() ? ti.value.trim() : 'General'; const r = new FileReader(); r.onload = function(e) { const rows = e.target.result.split('\n'); let c = 0; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { const n = doc.exists ? doc.data().displayName : "Unknown"; for (let i = 1; i < rows.length; i++) { const cols = rows[i].trim().split(','); if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: ct, question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: n, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); c++; } } alert(`Uploaded ${c} questions!`); document.getElementById('csv-file').value = ""; closeCsvUploadBox(); loadRoomQuestions(); }); }; r.readAsText(f); }
 
 // ---------------------------------
-// 🌟 NESTED FOLDERS DISPLAY (UPDATE 4.0)
+// 🌟 NESTED FOLDERS DISPLAY 
 // ---------------------------------
 function toggleAuthorQuestions(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openAuthorFolders.includes(id)) openAuthorFolders.push(id); } else { el.style.display = 'none'; openAuthorFolders = openAuthorFolders.filter(x => x !== id); } }
 function toggleTopicQuestions(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openTopicFolders.includes(id)) openTopicFolders.push(id); } else { el.style.display = 'none'; openTopicFolders = openTopicFolders.filter(x => x !== id); } }
@@ -223,7 +236,7 @@ function loadRoomQuestions() {
     
     snap.forEach(doc => { 
         let q = doc.data(); q.id = doc.id; q.topic = q.topic || 'General'; allCurrentQuestions.push(q); 
-        if(attemptedList.includes(q.id)) return; // Don't show attempted
+        if(attemptedList.includes(q.id)) return; 
         let author = q.creatorName || "Unknown"; 
         
         if(!aMap[author]) aMap[author] = {}; 
@@ -234,8 +247,7 @@ function loadRoomQuestions() {
     const im = currentRoomAdmins.includes(auth.currentUser.uid); 
     if(Object.keys(aMap).length === 0) { c.innerHTML = '<p style="color:#28a745; font-weight:bold;">🎉 All questions attempted in this room!</p>'; return; }
     
-    // 🌟 NESTED FOLDERS RENDER LOGIC
-    let html = `<button class="btn" style="width:auto; padding:5px 10px; font-size:11px; margin-bottom:10px; background:#6c757d;" onclick="toggleSelectAll()">☑️ Select/Deselect All Visible</button>`;
+    let html = ''; // Removed global select button
     
     for(let author in aMap) { 
       let authId = `auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; 
@@ -247,10 +259,14 @@ function loadRoomQuestions() {
           let topicId = `topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`;
           let topicOpen = openTopicFolders.includes(topicId) ? 'block' : 'none';
           
+          // 🌟 UPDATE 4.1: Added Select All button INSIDE the Topic header
+          let selectBtnHtml = im ? `<button class="btn" style="width:auto; padding:3px 8px; font-size:10px; margin:0; background:#6c757d;" onclick="event.stopPropagation(); toggleSelectTopic('${topicId}')">☑ Select All</button>` : '';
+          
           topicHtml += `
             <div class="topic-folder">
-                <div class="topic-title" onclick="toggleTopicQuestions('${topicId}')">
-                    <span>📂 ${topic} (${aMap[author][topic].length})</span> <span>🔽</span>
+                <div class="topic-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span onclick="toggleTopicQuestions('${topicId}')" style="flex:1;">📂 ${topic} (${aMap[author][topic].length}) 🔽</span>
+                    ${selectBtnHtml}
                 </div>
                 <div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">
                     ${renderQuestionsHTML(aMap[author][topic], im)}
@@ -266,7 +282,7 @@ function loadRoomQuestions() {
                </div>`; 
     } 
     c.innerHTML = html;
-    updateSelectionBar(); // Refresh selection state
+    updateSelectionBar(); 
   });
 }
 
@@ -292,40 +308,37 @@ function renderQuestionsHTML(arr, im) {
 }
 
 // ---------------------------------
-// 🌟 ANSWER CHECK & ARCHIVE LOGIC (UPDATE 4.0)
+// 🌟 ANSWER CHECK & ARCHIVE LOGIC 
 // ---------------------------------
 function checkAnswer(qId, sOpt, cOpt, qText) {
   document.querySelectorAll(`[id^="btn-${qId}-"]`).forEach(b => b.disabled = true); const cb = document.getElementById(`btn-${qId}-${sOpt}`), fb = document.getElementById(`feedback-${qId}`); recordQuestionAttempt(); 
   
-  // Clean Question from Attempt List
   let a = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || []; 
   if(!a.includes(qId)) { a.push(qId); localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(a)); }
 
   if (sOpt === cOpt) { 
     cb.style.background = "#d4edda"; cb.style.color = "#155724"; cb.style.borderColor = "#28a745"; fb.innerText = "✅ Correct!"; fb.style.color = "#28a745"; updateLeaderboardScore(); 
     
-    // 🌟 SAVE TO PROFILE SOLVED ARCHIVE
     if (!correctQuestions.some(item => item.id === qId)) {
        let ce = document.getElementById(`q-card-${qId}`); let cc = ce.cloneNode(true);
-       let chk = cc.querySelector('.bulk-delete-chk'); if(chk) chk.remove(); // Remove checkbox from saved card
+       let chk = cc.querySelector('.bulk-delete-chk'); if(chk) chk.remove(); 
        correctQuestions.push({ id: qId, html: cc.innerHTML, room: currentRoomName }); localStorage.setItem('studyRoomCorrect', JSON.stringify(correctQuestions));
     }
     
-    // Auto-hide correctly answered question from feed
     setTimeout(() => { let c = document.getElementById(`q-card-${qId}`); if(c) c.style.display = 'none'; }, 1000); 
   } 
   else { 
     cb.style.background = "#f8d7da"; cb.style.color = "#721c24"; cb.style.borderColor = "#dc3545"; document.getElementById(`btn-${qId}-${cOpt}`).style.background = "#d4edda"; document.getElementById(`btn-${qId}-${cOpt}`).style.borderColor = "#28a745"; document.getElementById(`btn-${qId}-${cOpt}`).style.color = "#155724"; fb.innerText = "❌ Wrong! (Saved to Revision)"; fb.style.color = "#dc3545"; 
     
     let ce = document.getElementById(`q-card-${qId}`); let cc = ce.cloneNode(true);
-    let chk = cc.querySelector('.bulk-delete-chk'); if(chk) chk.remove(); // Remove checkbox from revision card
+    let chk = cc.querySelector('.bulk-delete-chk'); if(chk) chk.remove(); 
     if (!wrongQuestions.some(item => item.id === qId)) { wrongQuestions.push({ id: qId, html: cc.innerHTML }); localStorage.setItem('studyRoomWrong', JSON.stringify(wrongQuestions)); updateRevisionCount(); } 
   }
   fb.style.display = 'block';
 }
 
 // ---------------------------------
-// 🌟 MY SOLVED QUESTIONS (NEW PROFILE HUB)
+// 🌟 MY SOLVED QUESTIONS 
 // ---------------------------------
 function openSolvedQuestionsScreen() { closeProfileMenuModal(); window.location.hash = '#solved'; }
 function renderSolvedQuestions() {
@@ -339,11 +352,10 @@ function renderSolvedQuestions() {
                </p>
                ${i.html}
              </div>`; 
-  }); correctQuestions.reverse(); // put it back to normal
+  }); correctQuestions.reverse(); 
   c.innerHTML = html;
 }
 
-// REVISION (Wrong Answers)
 function openRevisionBox() { window.location.hash = '#revision'; }
 function renderRevisionBox() {
   const c = document.getElementById('revisionListContainer'); if (wrongQuestions.length === 0) { c.innerHTML = '<p>Your revision list is empty!</p>'; return; }
