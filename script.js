@@ -1,4 +1,4 @@
-// 1. FIREBASE CONFIGURATION (Wahi purana configuration)
+// 1. FIREBASE CONFIGURATION
 const firebaseConfig = {
   apiKey: "AIzaSyBSpX_DBpJlvGspjzVhAKOBXV-0376P7Ug",
   authDomain: "studyroom-20729.firebaseapp.com",
@@ -98,7 +98,6 @@ function handleHashChange() {
 }
 auth.onAuthStateChanged((user) => { if (user) { db.collection('users').doc(user.uid).get().then(() => { let p = localStorage.getItem('pendingJoin'); if (p) { localStorage.removeItem('pendingJoin'); document.getElementById('joinRoomIdInput').value = p; joinRoomByFirebase(); } else { handleHashChange(); } }); } else { window.location.hash = ''; handleHashChange(); } });
 
-// AUTH & UTILS (Kept Same)
 function openLeaderboard() { let m = document.getElementById('leaderboardModal'), c = document.getElementById('leaderboardList'); if(!m || !c) return; m.style.display = 'flex'; c.innerHTML = "Loading..."; db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => { if(snap.empty) { c.innerHTML = "No scores yet."; return; } let html = '', rank = 1; snap.forEach(doc => { let d = doc.data(), medal = rank===1?'🥇':(rank===2?'🥈':(rank===3?'🥉':'🏅')); html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);"><span>${medal} <b>${d.name||'User'}</b></span><span style="color:#28a745; font-weight:bold;">${d.score||0} pts</span></div>`; rank++; }); c.innerHTML = html; }).catch(e => { c.innerHTML = `❌ Error`; }); }
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 function updateLeaderboardScore() { if(!auth.currentUser || !currentRoomId) return; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({ name: doc.data().displayName||"Unknown", score: firebase.firestore.FieldValue.increment(1) }, { merge: true }); }); }
@@ -169,7 +168,7 @@ function updateSelectionBar() {
 
 function clearSelection() { selectedQuestionIds = []; document.querySelectorAll('.bulk-delete-chk').forEach(c => c.checked = false); updateSelectionBar(); }
 
-// 🌟 UPDATE 4.1: TOPIC-WISE SELECT ALL LOGIC
+// 🌟 UPDATE 4.2: TOPIC-WISE SELECT ALL LOGIC (Now placed inside the opened folder)
 function toggleSelectTopic(topicId) {
     const container = document.getElementById(topicId);
     if(!container) return;
@@ -220,7 +219,7 @@ function saveQuestionToFirebase(isAddNext) {
 function uploadCSV() { const f = document.getElementById('csv-file').files[0]; if (!f) return alert("Select CSV!"); const ti = document.getElementById('csvTopic'), ct = ti && ti.value.trim() ? ti.value.trim() : 'General'; const r = new FileReader(); r.onload = function(e) { const rows = e.target.result.split('\n'); let c = 0; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { const n = doc.exists ? doc.data().displayName : "Unknown"; for (let i = 1; i < rows.length; i++) { const cols = rows[i].trim().split(','); if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: ct, question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: n, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); c++; } } alert(`Uploaded ${c} questions!`); document.getElementById('csv-file').value = ""; closeCsvUploadBox(); loadRoomQuestions(); }); }; r.readAsText(f); }
 
 // ---------------------------------
-// 🌟 NESTED FOLDERS DISPLAY 
+// 🌟 NESTED FOLDERS DISPLAY (UPDATE 4.2)
 // ---------------------------------
 function toggleAuthorQuestions(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openAuthorFolders.includes(id)) openAuthorFolders.push(id); } else { el.style.display = 'none'; openAuthorFolders = openAuthorFolders.filter(x => x !== id); } }
 function toggleTopicQuestions(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openTopicFolders.includes(id)) openTopicFolders.push(id); } else { el.style.display = 'none'; openTopicFolders = openTopicFolders.filter(x => x !== id); } }
@@ -247,7 +246,7 @@ function loadRoomQuestions() {
     const im = currentRoomAdmins.includes(auth.currentUser.uid); 
     if(Object.keys(aMap).length === 0) { c.innerHTML = '<p style="color:#28a745; font-weight:bold;">🎉 All questions attempted in this room!</p>'; return; }
     
-    let html = ''; // Removed global select button
+    let html = ''; 
     
     for(let author in aMap) { 
       let authId = `auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; 
@@ -259,16 +258,16 @@ function loadRoomQuestions() {
           let topicId = `topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`;
           let topicOpen = openTopicFolders.includes(topicId) ? 'block' : 'none';
           
-          // 🌟 UPDATE 4.1: Added Select All button INSIDE the Topic header
-          let selectBtnHtml = im ? `<button class="btn" style="width:auto; padding:3px 8px; font-size:10px; margin:0; background:#6c757d;" onclick="event.stopPropagation(); toggleSelectTopic('${topicId}')">☑ Select All</button>` : '';
+          // 🌟 UPDATE 4.2: Select All button moved inside the topic container (only visible when opened)
+          let selectBtnHtml = im ? `<div style="margin-bottom:10px; text-align:right;"><button class="btn" style="width:auto; padding:5px 12px; font-size:11px; margin:0; background:#6c757d;" onclick="toggleSelectTopic('${topicId}')">☑ Select All in ${topic}</button></div>` : '';
           
           topicHtml += `
             <div class="topic-folder">
-                <div class="topic-title" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span onclick="toggleTopicQuestions('${topicId}')" style="flex:1;">📂 ${topic} (${aMap[author][topic].length}) 🔽</span>
-                    ${selectBtnHtml}
+                <div class="topic-title" onclick="toggleTopicQuestions('${topicId}')">
+                    <span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span>
                 </div>
                 <div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">
+                    ${selectBtnHtml}
                     ${renderQuestionsHTML(aMap[author][topic], im)}
                 </div>
             </div>`;
@@ -362,3 +361,4 @@ function renderRevisionBox() {
   let html = ''; wrongQuestions.forEach((i, idx) => { html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;"><p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${idx + 1}</p>${i.html}</div>`; }); c.innerHTML = html;
 }
 function updateRevisionCount() { const b = document.getElementById('revCount'); if(b) b.innerText = wrongQuestions.length; }
+
