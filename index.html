@@ -41,7 +41,7 @@
     .topic-folder { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 10px; padding: 10px; }
     .topic-title { font-weight: bold; color: var(--text-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
     
-    /* Mock Test Styles */
+    /* Mock Test Specific Styles */
     .mock-active-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 3000; display: none; flex-direction: column; }
     .mock-header { background: #2c3e50; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
     .mock-body { flex: 1; overflow-y: auto; padding: 20px; }
@@ -129,7 +129,7 @@
     <div style="margin-top: 20px;"><h3>My Rooms</h3><div id="roomsListContainer" style="margin-top:10px;">Loading rooms...</div></div>
   </div>
 
-  <!-- SCREENS -->
+  <!-- BASIC SCREENS -->
   <div class="auth-container" id="discoverScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: #17a2b8; font-size: 22px;">🌍 Discover Public Rooms</h2>
     <div class="input-group" style="margin-bottom: 10px;"><input type="text" id="searchPublicRoom" placeholder="🔍 Search rooms..." onkeyup="filterPublicRooms()" class="styled-input"></div>
@@ -224,19 +224,21 @@
     </div>
   </div>
 
-  <!-- ADD STUDY MATERIAL MODAL -->
+  <!-- ALL MODALS (ONLY ONCE) -->
+
+  <!-- Add Study Material Modal -->
   <div id="addMaterialModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAddMaterialModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: #17a2b8; margin-top: 0;">✍️ Upload Study Material</h3>
       <input type="text" id="matTopic" placeholder="Topic (e.g. History)" class="styled-input">
       <input type="text" id="matTitle" placeholder="Title of the Note" class="styled-input">
       <textarea id="matContent" placeholder="Write or paste your detailed notes here..." class="styled-input" style="height: 180px; resize: vertical;"></textarea>
-      <button class="btn" style="background:#28a745; margin-top:10px;" onclick="saveMaterialToFirebase()">Save Note</button>
+      <button class="btn" id="saveMatBtn" style="background:#28a745; margin-top:10px;" onclick="saveMaterialToFirebase(event)">Save Note</button>
       <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeAddMaterialModal()">Cancel</button>
     </div>
   </div>
 
-  <!-- MOCK TEST SETUP MODAL -->
+  <!-- Mock Test Setup Modal -->
   <div id="mockSetupModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeMockSetupModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: #6f42c1; margin-top:0; text-align:center;">📝 Mock Test Setup</h3>
@@ -256,7 +258,7 @@
     </div>
   </div>
 
-  <!-- ACTIVE MOCK TEST FULL SCREEN -->
+  <!-- Active Mock Test Full Screen -->
   <div id="activeMockTestScreen" class="mock-active-screen">
     <div class="mock-header">
       <span id="mockProgressText">Q: 1/20</span>
@@ -273,18 +275,16 @@
     </div>
   </div>
 
-  <!-- 🌟 MOCK TEST REVIEW SCREEN -->
+  <!-- Mock Test Review Screen -->
   <div id="mockReviewScreen" class="mock-active-screen" style="z-index: 3600;">
     <div class="mock-header" style="background: #17a2b8;">
       <span>🔍 Test Review</span>
       <button class="btn" style="width:auto; padding:5px 12px; background:#fff; color:#17a2b8; margin:0;" onclick="closeMockReview()">Close</button>
     </div>
-    <div class="mock-body" id="mockReviewContainer" style="background: var(--bg-color);">
-      <!-- Review content injected here -->
-    </div>
+    <div class="mock-body" id="mockReviewContainer" style="background: var(--bg-color);"></div>
   </div>
 
-  <!-- MOCK TEST REPORT CARD -->
+  <!-- Mock Test Report Card -->
   <div id="mockReportModal" class="profile-menu-overlay" style="align-items: center; z-index: 3500;" onclick="closeMockReport(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; text-align:center;" onclick="event.stopPropagation()">
       <h2 style="margin-top:0; color:#6f42c1;">📊 Report Card</h2>
@@ -299,15 +299,12 @@
       </div>
       <h3 style="margin-bottom:5px;">🎯 Accuracy: <span id="reportAccuracy" style="color:#007bff;">0%</span></h3>
       <p style="font-size:11px; color:#888; margin-bottom:15px;">Saved to Test History & Leaderboard.</p>
-      
-      <!-- Review Answers Button -->
       <button class="btn" style="background:#17a2b8; margin-bottom:10px;" onclick="openMockReview('test')">🔍 Review Answers</button>
-      
       <button class="btn" style="background:#6f42c1;" onclick="closeMockReport()">Return to Room</button>
     </div>
   </div>
 
-  <!-- OTHER MODALS (Assign, Options, CSV, Share, etc.) -->
+  <!-- Other Necessary Modals -->
   <div id="assignTopicModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAssignTopicModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">🏷️ Move to Topic</h3>
