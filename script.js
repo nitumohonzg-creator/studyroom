@@ -20,9 +20,18 @@ let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 let correctQuestions = JSON.parse(localStorage.getItem('studyRoomCorrect')) || []; 
 let allPublicRooms = []; 
 let selectedQuestionIds = []; 
-let selectedSolvedIds = []; // 🌟 For Re-attempt Selection
+let selectedSolvedIds = []; 
 
 updateRevisionCount(); checkDailyStreak(); 
+
+// ---------------------------------
+// 🔐 AUTHENTICATION LOGIC (FIXED)
+// ---------------------------------
+function toggleAuth(type) { document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none'; document.getElementById('signupForm').style.display = type === 'signup' ? 'block' : 'none'; }
+function signupUser() { const n=document.getElementById('signupName').value.trim(), e=document.getElementById('signupEmail').value.trim(), p=document.getElementById('signupPassword').value.trim(); if(!n||!e||!p) return alert("Fill fields"); auth.createUserWithEmailAndPassword(e, p).then(c => db.collection('users').doc(c.user.uid).set({ displayName: n, email: e, username: "", mobile: "", bio: "" })).then(() => { alert("Created!"); toggleAuth('login'); }).catch(e => alert(e.message)); }
+function loginUser() { auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value.trim()).then(() => handleHashChange()).catch(e => alert(e.message)); }
+function forgotPassword() { const e=document.getElementById('loginEmail').value.trim(); if(!e) return alert("Enter email!"); auth.sendPasswordResetEmail(e).then(() => alert("Sent!")).catch(e => alert(e.message)); }
+function logoutUser() { auth.signOut().then(() => { window.location.hash=''; window.location.reload(); }); }
 
 // -------------------------------
 // 🔥 DAILY STREAK
@@ -54,7 +63,7 @@ function handleHashChange() {
 }
 auth.onAuthStateChanged((user) => { if (user) { db.collection('users').doc(user.uid).get().then(() => { let p = localStorage.getItem('pendingJoin'); if (p) { localStorage.removeItem('pendingJoin'); document.getElementById('joinRoomIdInput').value = p; joinRoomByFirebase(); } else { handleHashChange(); } }); } else { window.location.hash = ''; handleHashChange(); } });
 
-// MODALS (Standard App logic)
+// MODALS 
 function openProfileMenuModal() { document.getElementById('profileSettingsModal').style.display = 'flex'; if(auth.currentUser) db.collection('users').doc(auth.currentUser.uid).get().then(doc => { if(doc.exists) document.getElementById('menuWelcomeText').innerText = "Hi, " + doc.data().displayName + "!"; }); }
 function closeProfileMenuModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m = document.getElementById('profileSettingsModal'); if(m) m.style.display = 'none'; }
 function openRoomMenuModal() { document.getElementById('roomMenuModal').style.display = 'flex'; }
@@ -67,7 +76,6 @@ function backToDashboard() { window.location.hash = '#dashboard'; }
 function openDiscoverRooms() { window.location.hash = '#discover'; }
 function openProfileScreen() { closeProfileMenuModal(); db.collection('users').doc(auth.currentUser.uid).get().then(doc => { if(doc.exists) { let d=doc.data(); document.getElementById('profileName').value=d.displayName||""; document.getElementById('profileUsername').value=d.username||""; document.getElementById('profileMobile').value=d.mobile||""; document.getElementById('profileBio').value=d.bio||""; window.location.hash='#profile'; } }); }
 function saveProfileData() { const n=document.getElementById('profileName').value.trim(); if(!n) return alert("Name required!"); db.collection('users').doc(auth.currentUser.uid).update({ displayName: n, username: document.getElementById('profileUsername').value.trim(), mobile: document.getElementById('profileMobile').value.trim(), bio: document.getElementById('profileBio').value.trim() }).then(() => { alert("Updated!"); window.location.hash='#dashboard'; }); }
-function logoutUser() { auth.signOut().then(() => { window.location.hash=''; window.location.reload(); }); }
 function openLeaderboard() { let m = document.getElementById('leaderboardModal'), c = document.getElementById('leaderboardList'); if(!m || !c) return; m.style.display = 'flex'; c.innerHTML = "Loading..."; db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => { if(snap.empty) { c.innerHTML = "No scores yet. Take a Mock Test!"; return; } let html = '', rank = 1; snap.forEach(doc => { let d = doc.data(), medal = rank===1?'🥇':(rank===2?'🥈':(rank===3?'🥉':'🏅')); html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);"><span>${medal} <b>${d.name||'User'}</b></span><span style="color:#28a745; font-weight:bold;">${parseFloat(d.score||0).toFixed(2)} pts</span></div>`; rank++; }); c.innerHTML = html; }).catch(e => { c.innerHTML = `❌ Error`; }); }
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 
@@ -76,7 +84,7 @@ function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu
 // ---------------------------------
 let mockTestQuestions = [];
 let mockCurrentIndex = 0;
-let mockUserAnswers = {}; // { qId: 'A' } (Tracks selected ORIGINAL option ID)
+let mockUserAnswers = {}; // Tracks selected ORIGINAL option ID
 let mockTimer = null;
 let mockTimeLeft = 0;
 
@@ -88,14 +96,12 @@ function startMockTest() {
     const countVal = document.getElementById('mockQCount').value;
     const useTimer = document.getElementById('mockTimerToggle').checked;
     
-    // 1. Shuffle and Pick Questions
     let shuffledQ = [...allCurrentQuestions].sort(() => Math.random() - 0.5);
     let qCount = countVal === 'all' ? shuffledQ.length : parseInt(countVal);
     if(qCount > shuffledQ.length) qCount = shuffledQ.length;
     
     mockTestQuestions = shuffledQ.slice(0, qCount);
     
-    // 2. Prepare Option Shuffling for each question
     mockTestQuestions.forEach(q => {
         let opts = [ {id: 'A', text: q.optionA}, {id: 'B', text: q.optionB}, {id: 'C', text: q.optionC}, {id: 'D', text: q.optionD} ];
         q.shuffledOptions = opts.sort(() => Math.random() - 0.5);
@@ -104,7 +110,6 @@ function startMockTest() {
     mockCurrentIndex = 0;
     mockUserAnswers = {};
     
-    // 3. Setup Timer
     if(useTimer) {
         mockTimeLeft = qCount * 60; // 1 min per question
         document.getElementById('mockTimerDisplay').style.display = 'inline-block';
@@ -120,7 +125,7 @@ function startMockTest() {
     closeMockSetupModal();
     document.getElementById('roomViewScreen').style.display = 'none';
     document.getElementById('activeMockTestScreen').style.display = 'flex';
-    updateBottomNav(); // Hide nav
+    updateBottomNav(); 
     renderMockQuestion();
 }
 
@@ -164,14 +169,12 @@ function submitMockTestEarly() {
     if(finalScore < 0) finalScore = 0;
     let accuracy = (correct + wrong) > 0 ? Math.round((correct / (correct + wrong)) * 100) : 0;
 
-    // Update UI
     document.getElementById('reportFinalScore').innerText = finalScore.toFixed(2);
     document.getElementById('reportCorrect').innerText = correct;
     document.getElementById('reportWrong').innerText = wrong;
     document.getElementById('reportUnattempted').innerText = unattempted;
     document.getElementById('reportAccuracy').innerText = accuracy + "%";
     
-    // Update Leaderboard Firebase
     if(auth.currentUser && currentRoomId && finalScore > 0) {
         db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
             db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid)
@@ -189,9 +192,8 @@ function closeMockReport(e) {
     handleHashChange();
 }
 
-
 // ---------------------------------
-// 🌟 2. SOLVED ARCHIVE & RE-ATTEMPT (UPDATE 5.0)
+// 🌟 2. SOLVED ARCHIVE & RE-ATTEMPT
 // ---------------------------------
 function openSolvedQuestionsScreen() { closeProfileMenuModal(); window.location.hash = '#solved'; }
 
@@ -238,12 +240,9 @@ function clearSolvedSelection() { selectedSolvedIds = []; document.querySelector
 
 function reattemptSelectedQuestions() {
     if(selectedSolvedIds.length === 0) return;
-    
-    // 1. Remove from Profile Archive (correctQuestions)
     correctQuestions = correctQuestions.filter(item => !selectedSolvedIds.includes(item.id));
     localStorage.setItem('studyRoomCorrect', JSON.stringify(correctQuestions));
     
-    // 2. Remove from Attempted Lists (so they reappear in practice feed)
     for (let i = 0; i < localStorage.length; i++) {
         let key = localStorage.key(i);
         if (key && key.startsWith('attempted_')) {
@@ -331,7 +330,7 @@ function openRevisionBox() { window.location.hash = '#revision'; }
 function renderRevisionBox() { const c = document.getElementById('revisionListContainer'); if (wrongQuestions.length === 0) { c.innerHTML = '<p>Your revision list is empty!</p>'; return; } let html = ''; wrongQuestions.forEach((i, idx) => { html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;"><p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${idx + 1}</p>${i.html}</div>`; }); c.innerHTML = html; }
 function updateRevisionCount() { const b = document.getElementById('revCount'); if(b) b.innerText = wrongQuestions.length; }
 
-// Bulk Logic, CRUD & Setup kept from previous version (No space constraints)
+// Bulk Logic & Database
 function handleCheckboxChange(cb) { if(cb.checked) { if(!selectedQuestionIds.includes(cb.value)) selectedQuestionIds.push(cb.value); } else { selectedQuestionIds = selectedQuestionIds.filter(id => id !== cb.value); } updateSelectionBar(); }
 function updateSelectionBar() { const bar = document.getElementById('selectionActionBar'); const txt = document.getElementById('selectedCountText'); if(selectedQuestionIds.length > 0) { bar.style.display = 'flex'; txt.innerText = `${selectedQuestionIds.length} Selected`; } else { bar.style.display = 'none'; } }
 function clearSelection() { selectedQuestionIds = []; document.querySelectorAll('.bulk-delete-chk').forEach(c => c.checked = false); updateSelectionBar(); }
@@ -358,7 +357,7 @@ function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('ro
 function saveQuestionToFirebase(isAddNext) { const qData = { topic: document.getElementById('queTopic').value.trim()||'General', question: document.getElementById('queText').value.trim(), optionA: document.getElementById('optA').value.trim(), optionB: document.getElementById('optB').value.trim(), optionC: document.getElementById('optC').value.trim(), optionD: document.getElementById('optD').value.trim(), correct: document.getElementById('correctOpt').value.trim().toUpperCase(), timeLimit: document.getElementById('queTime').value.trim()||null }; if(!qData.question || !qData.optionA || !qData.correct) return alert("Fill required fields!"); if (editingQuestionId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData).then(() => { alert("Updated!"); closeManualAddBox(); loadRoomQuestions(); }); } else { db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown"; qData.creatorUid = auth.currentUser.uid; qData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection('rooms').doc(currentRoomId).collection('questions').add(qData).then(() => { if(isAddNext) { ['queText','optA','optB','optC','optD','correctOpt'].forEach(id => document.getElementById(id).value = ''); document.getElementById('queText').focus(); loadRoomQuestions(); } else { alert("Added!"); closeManualAddBox(); loadRoomQuestions(); } }); }); } }
 function uploadCSV() { const f = document.getElementById('csv-file').files[0]; if (!f) return alert("Select CSV!"); const ti = document.getElementById('csvTopic'), ct = ti && ti.value.trim() ? ti.value.trim() : 'General'; const r = new FileReader(); r.onload = function(e) { const rows = e.target.result.split('\n'); let c = 0; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { const n = doc.exists ? doc.data().displayName : "Unknown"; for (let i = 1; i < rows.length; i++) { const cols = rows[i].trim().split(','); if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: ct, question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: n, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); c++; } } alert(`Uploaded ${c} questions!`); document.getElementById('csv-file').value = ""; closeCsvUploadBox(); loadRoomQuestions(); }); }; r.readAsText(f); }
 
-// Room Connection & Actions
+// Room Connection
 function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; }
 function closeCreateRoom() { document.getElementById('createRoomBox').style.display = 'none'; }
 function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; }
@@ -388,3 +387,4 @@ function loadRoomMembers() { const c = document.getElementById('membersListConta
 function makeAdmin(uid) { if(confirm("Make Admin?")) db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayUnion(uid) }).then(() => loadRoomMembers()); }
 function removeAdminRole(uid) { if(confirm("Remove Admin?")) db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayRemove(uid) }).then(() => loadRoomMembers()); }
 function removeMember(uid) { if(confirm("Kick member?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(uid), admins: firebase.firestore.FieldValue.arrayRemove(uid) }).then(() => loadRoomMembers()); }
+
