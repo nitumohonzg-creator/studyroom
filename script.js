@@ -91,12 +91,11 @@ function openStudyMaterialScreen() { closeRoomMenuModal(); window.location.hash 
 function openAddMaterialModal() { document.getElementById('addMaterialModal').style.display = 'flex'; document.getElementById('matTopic').value = ''; document.getElementById('matTitle').value = ''; document.getElementById('matContent').value = ''; }
 function closeAddMaterialModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('addMaterialModal').style.display = 'none'; }
 function saveMaterialToFirebase() { const topic = document.getElementById('matTopic').value.trim() || 'General'; const title = document.getElementById('matTitle').value.trim(); const content = document.getElementById('matContent').value.trim(); if(!title || !content) return alert("Title and Content are required!"); db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { const data = { topic: topic, title: title, content: content, creatorUid: auth.currentUser.uid, creatorName: userDoc.exists ? userDoc.data().displayName : "Unknown", createdAt: firebase.firestore.FieldValue.serverTimestamp() }; db.collection('rooms').doc(currentRoomId).collection('materials').add(data).then(() => { alert("Note Added Successfully!"); closeAddMaterialModal(); loadMaterials(); }); }); }
-
 let allCurrentMaterials = []; let openMatAuthorFolders = []; let openMatTopicFolders = [];
 function toggleMatAuthor(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openMatAuthorFolders.includes(id)) openMatAuthorFolders.push(id); } else { el.style.display = 'none'; openMatAuthorFolders = openMatAuthorFolders.filter(x => x !== id); } }
 function toggleMatTopic(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openMatTopicFolders.includes(id)) openMatTopicFolders.push(id); } else { el.style.display = 'none'; openMatTopicFolders = openMatTopicFolders.filter(x => x !== id); } }
 function filterMaterials() { const q = document.getElementById('searchMaterial').value.toLowerCase(); allCurrentMaterials.forEach(m => { const c = document.getElementById(`mat-card-${m.id}`); if(c) c.style.display = (m.title.toLowerCase().includes(q) || m.topic.toLowerCase().includes(q)) ? "block" : "none"; }); }
-function loadMaterials() { const c = document.getElementById('materialsListContainer'); c.innerHTML = 'Loading study materials...'; const im = currentRoomAdmins.includes(auth.currentUser.uid); let addBtn = document.getElementById('addMaterialMainBtn'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block'; db.collection('rooms').doc(currentRoomId).collection('materials').orderBy('createdAt', 'desc').get().then(snap => { if (snap.empty) { c.innerHTML = 'No study materials found in this room.'; allCurrentMaterials = []; return; } let aMap = {}; allCurrentMaterials = []; snap.forEach(doc => { let m = doc.data(); m.id = doc.id; m.topic = m.topic || 'General'; allCurrentMaterials.push(m); let author = m.creatorName || "Unknown"; if(!aMap[author]) aMap[author] = {}; if(!aMap[author][m.topic]) aMap[author][m.topic] = []; aMap[author][m.topic].push(m); }); let html = ''; for(let author in aMap) { let authId = `mat-auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; let authOpen = openMatAuthorFolders.includes(authId) ? 'block' : 'none'; let totalAuthM = 0; let topicHtml = ''; for(let topic in aMap[author]) { totalAuthM += aMap[author][topic].length; let topicId = `mat-topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`; let topicOpen = openMatTopicFolders.includes(topicId) ? 'block' : 'none'; topicHtml += `<div class="topic-folder"><div class="topic-title" onclick="toggleMatTopic('${topicId}')"><span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span></div><div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">${renderMaterialsHTML(aMap[author][topic], im)}</div></div>`; } html += `<div class="q-card" style="border: 2px solid #17a2b8;"><h4 style="color:#17a2b8; cursor:pointer; font-size:16px; margin:0;" onclick="toggleMatAuthor('${authId}')">👤 Notes by ${author} (${totalAuthM}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`; } c.innerHTML = html; }); }
+function loadMaterials() { const c = document.getElementById('materialsListContainer'); c.innerHTML = 'Loading study materials...'; const im = currentRoomAdmins.includes(auth.currentUser.uid); let addBtn = document.getElementById('addMaterialMainBtn'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block'; db.collection('rooms').doc(currentRoomId).collection('materials').orderBy('createdAt', 'desc').get().then(snap => { if (snap.empty) { c.innerHTML = 'No study materials found in this room.'; allCurrentMaterials = []; return; } let aMap = {}; allCurrentMaterials = []; snap.forEach(doc => { let m = doc.data(); m.id = doc.id; m.topic = m.topic || 'General'; allCurrentMaterials.push(m); let author = m.creatorName || "Unknown"; if(!aMap[author]) aMap[author] = {}; if(!aMap[author][m.topic]) aMap[author][m.topic] = []; aMap[author][m.topic].push(m); }); let html = ''; for(let author in aMap) { let authId = `mat-auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; let authOpen = openMatAuthorFolders.includes(authId) ? 'block' : 'none'; let totalAuthM = 0; let topicHtml = ''; for(let topic in aMap[author]) { totalAuthM += aMap[author][topic].length; let topicId = `mat-topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`; let topicOpen = openMatTopicFolders.includes(topicId) ? 'block' : 'none'; topicHtml += `<div class="topic-folder"><div class="topic-title" onclick="toggleMatTopic('${topicId}')"><span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span></div><div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">${renderMaterialsHTML(aMap[author][topic], im)}</div></div>`; } html += `<div class="q-card" style="border: 2px solid #17a2b8;"><h4 style="color:#17a2b8; cursor:pointer; font-size:16px; margin:0;" onclick="toggleMatAuthor('${authId}')">👤 Notes by ${author} (${totalAuthM}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`; } c.innerHTML = html; }).catch(err => { c.innerHTML = `<p style="color:red;">Error loading materials.</p>`; }); }
 function renderMaterialsHTML(arr, im) { let html = ''; arr.forEach(m => { let delBtn = (m.creatorUid === auth.currentUser.uid || im) ? `<button class="btn" style="width:auto; padding:3px 8px; background:#dc3545; font-size:10px; margin:0;" onclick="deleteMaterial('${m.id}')"><i class="fas fa-trash"></i></button>` : ''; html += `<div id="mat-card-${m.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"> <h4 style="margin:0; color:var(--primary-btn);">${m.title}</h4> ${delBtn} </div> <p style="white-space: pre-wrap; font-size:13px; color:var(--text-color); margin:0;">${m.content}</p> </div>`; }); return html; }
 function deleteMaterial(id) { if(confirm("Delete this note permanently?")) { db.collection('rooms').doc(currentRoomId).collection('materials').doc(id).delete().then(() => { alert("Deleted!"); loadMaterials(); }); } }
 
@@ -109,6 +108,7 @@ let mockUserAnswers = {};
 let mockTimer = null;
 let mockTimeLeft = 0;
 let currentMockTopics = [];
+let reviewSourceType = 'test'; 
 
 function openMockSetupModal() { document.getElementById('mockSetupModal').style.display = 'flex'; document.getElementById('mockTimerToggle').checked = false; const container = document.getElementById('mockTopicContainer'); let topics = [...new Set(allCurrentQuestions.map(q => q.topic))]; if(topics.length === 0) { container.innerHTML = '<p style="font-size:12px; color:red;">No topics available.</p>'; return; } let html = `<label style="font-size:13px; display:block; margin-bottom:8px; font-weight:bold; border-bottom:1px solid var(--border-color); padding-bottom:5px;"> <input type="checkbox" id="selectAllTopics" checked onchange="toggleSelectAllTopics(this)" style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> Select All </label>`; topics.forEach(t => { html += `<label style="display:block; margin:5px 0; font-size:13px;"> <input type="checkbox" class="topic-chk" value="${t}" checked style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> ${t} </label>`; }); container.innerHTML = html; }
 function closeMockSetupModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockSetupModal').style.display = 'none'; }
@@ -142,7 +142,16 @@ function submitMockTestEarly() {
     let finalScore = (correct * 1) - (wrong * 0.25); if(finalScore < 0) finalScore = 0; let accuracy = (correct + wrong) > 0 ? Math.round((correct / (correct + wrong)) * 100) : 0;
     document.getElementById('reportFinalScore').innerText = finalScore.toFixed(2); document.getElementById('reportCorrect').innerText = correct; document.getElementById('reportWrong').innerText = wrong; document.getElementById('reportUnattempted').innerText = unattempted; document.getElementById('reportAccuracy').innerText = accuracy + "%";
     
-    let resultObj = { date: new Date().toLocaleString(), room: currentRoomName || "Unknown", topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '), totalQ: mockTestQuestions.length, attempted: correct + wrong, correct: correct, wrong: wrong, score: finalScore.toFixed(2), accuracy: accuracy };
+    // Save Qs & Ans in History for later review!
+    let resultObj = { 
+        date: new Date().toLocaleString(), 
+        room: currentRoomName || "Unknown", 
+        topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '), 
+        totalQ: mockTestQuestions.length, 
+        attempted: correct + wrong, 
+        correct: correct, wrong: wrong, score: finalScore.toFixed(2), accuracy: accuracy,
+        questions: mockTestQuestions, userAnswers: mockUserAnswers 
+    };
     let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; history.push(resultObj); localStorage.setItem('studyRoomMockHistory', JSON.stringify(history));
     
     updateLeaderboardScore(finalScore); 
@@ -150,14 +159,26 @@ function submitMockTestEarly() {
 }
 function closeMockReport(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockReportModal').style.display = 'none'; window.location.hash = '#room'; handleHashChange(); }
 
-// 🌟 REVIEW ANSWERS LOGIC (NEW)
-function openMockReview() {
+// 🌟 REVIEW ANSWERS LOGIC
+function openMockReview(source = 'test', histIndex = null) {
+    reviewSourceType = source;
     document.getElementById('mockReviewScreen').style.display = 'flex';
     const container = document.getElementById('mockReviewContainer');
     let html = '';
 
-    mockTestQuestions.forEach((q, index) => {
-        let uAns = mockUserAnswers[q.id];
+    let qList = mockTestQuestions;
+    let uAnsList = mockUserAnswers;
+
+    if(source === 'history') {
+        let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || [];
+        let item = history[histIndex];
+        if(!item || !item.questions) { container.innerHTML = '<p style="padding:20px;">Review not available for this old test.</p>'; return; }
+        qList = item.questions;
+        uAnsList = item.userAnswers;
+    }
+
+    qList.forEach((q, index) => {
+        let uAns = uAnsList[q.id];
         let isCorrect = uAns === q.correct;
         let statusText = !uAns ? '<span style="color:#6c757d;">⚪ Skipped</span>' : (isCorrect ? '<span style="color:#28a745;">✅ Correct</span>' : '<span style="color:#dc3545;">❌ Wrong</span>');
 
@@ -176,11 +197,41 @@ function openMockReview() {
     });
     container.innerHTML = html;
 }
-function closeMockReview() { document.getElementById('mockReviewScreen').style.display = 'none'; }
+function closeMockReview() { 
+    document.getElementById('mockReviewScreen').style.display = 'none'; 
+}
 
 
 function openMockHistoryScreen() { closeProfileMenuModal(); window.location.hash = '#mockhistory'; }
-function renderMockHistory() { const c = document.getElementById('mockHistoryListContainer'); let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; } let html = ''; history.reverse().forEach(h => { html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);"> <div style="display:flex; justify-content:space-between; margin-bottom:5px;"> <b style="color:#6f42c1; font-size:14px;">${h.room}</b> <span style="font-size:10px; color:#888;">${h.date}</span> </div> <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p> <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;"> <span style="color:#28a745;">Score: ${h.score}</span> <span style="color:#007bff;">Acc: ${h.accuracy}%</span> </div> <div style="font-size:11px; display:flex; gap:10px; color:#555;"> <span>Total: ${h.totalQ}</span> <span>✅ ${h.correct}</span> <span>❌ ${h.wrong}</span> </div> </div>`; }); history.reverse(); c.innerHTML = html; }
+function renderMockHistory() { 
+    const c = document.getElementById('mockHistoryListContainer'); 
+    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; 
+    if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; } 
+    
+    let html = ''; 
+    // Loop backwards so newest is at the top, but we pass the original correct INDEX to the review function!
+    for(let i = history.length - 1; i >= 0; i--) {
+        let h = history[i];
+        let revBtn = h.questions ? `<button class="btn" style="width:auto; padding:5px 12px; margin:0; background:#17a2b8; font-size:11px;" onclick="openMockReview('history', ${i})">🔍 Review</button>` : '';
+
+        html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);"> 
+                  <div style="display:flex; justify-content:space-between; margin-bottom:5px;"> 
+                     <b style="color:#6f42c1; font-size:14px;">${h.room}</b> 
+                     <span style="font-size:10px; color:#888;">${h.date}</span> 
+                  </div> 
+                  <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p> 
+                  <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;"> 
+                     <span style="color:#28a745;">Score: ${h.score}</span> 
+                     <span style="color:#007bff;">Acc: ${h.accuracy}%</span> 
+                  </div> 
+                  <div style="font-size:11px; display:flex; justify-content:space-between; align-items:center; color:#555;"> 
+                     <div><span>Total: ${h.totalQ}</span> | <span>✅ ${h.correct}</span> | <span>❌ ${h.wrong}</span></div>
+                     ${revBtn}
+                  </div> 
+                 </div>`; 
+    }
+    c.innerHTML = html; 
+}
 
 // ---------------------------------
 // 🌟 SOLVED ARCHIVE & PRACTICE FEED 
@@ -216,6 +267,9 @@ function loadRoomQuestions() {
       html += `<div class="q-card" style="border: 2px solid var(--border-color);"><h4 style="color:var(--primary-btn); cursor:pointer; font-size:16px; margin:0;" onclick="toggleAuthorQuestions('${authId}')">👤 MCQ by ${author} (${totalAuthQ}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`; 
     } 
     c.innerHTML = html; updateSelectionBar(); 
+  }).catch(err => {
+      console.error(err);
+      c.innerHTML = '<p style="color:red; font-size:13px;">Error loading practice feed. Refresh page.</p>';
   });
 }
 
@@ -263,7 +317,7 @@ function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('ro
 function saveQuestionToFirebase(isAddNext) { const qData = { topic: document.getElementById('queTopic').value.trim()||'General', question: document.getElementById('queText').value.trim(), optionA: document.getElementById('optA').value.trim(), optionB: document.getElementById('optB').value.trim(), optionC: document.getElementById('optC').value.trim(), optionD: document.getElementById('optD').value.trim(), correct: document.getElementById('correctOpt').value.trim().toUpperCase(), timeLimit: document.getElementById('queTime').value.trim()||null }; if(!qData.question || !qData.optionA || !qData.correct) return alert("Fill required fields!"); if (editingQuestionId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData).then(() => { alert("Updated!"); closeManualAddBox(); loadRoomQuestions(); }); } else { db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown"; qData.creatorUid = auth.currentUser.uid; qData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection('rooms').doc(currentRoomId).collection('questions').add(qData).then(() => { if(isAddNext) { ['queText','optA','optB','optC','optD','correctOpt'].forEach(id => document.getElementById(id).value = ''); document.getElementById('queText').focus(); loadRoomQuestions(); } else { alert("Added!"); closeManualAddBox(); loadRoomQuestions(); } }); }); } }
 function uploadCSV() { const f = document.getElementById('csv-file').files[0]; if (!f) return alert("Select CSV!"); const ti = document.getElementById('csvTopic'), ct = ti && ti.value.trim() ? ti.value.trim() : 'General'; const r = new FileReader(); r.onload = function(e) { const rows = e.target.result.split('\n'); let c = 0; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { const n = doc.exists ? doc.data().displayName : "Unknown"; for (let i = 1; i < rows.length; i++) { const cols = rows[i].trim().split(','); if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: ct, question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: n, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); c++; } } alert(`Uploaded ${c} questions!`); document.getElementById('csv-file').value = ""; closeCsvUploadBox(); loadRoomQuestions(); }); }; r.readAsText(f); }
 
-// Room Connection Actions
+// Room Connection Actions (Loading Bug Fixed)
 function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; }
 function closeCreateRoom() { document.getElementById('createRoomBox').style.display = 'none'; }
 function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; }
@@ -271,7 +325,25 @@ function closeJoinRoom() { document.getElementById('joinRoomBox').style.display 
 function saveRoomToFirebase() { const n = document.getElementById('newRoomName').value.trim(), t = document.getElementById('isRoomPublicToggle'), p = t ? t.checked : false; if(!n) return alert("Enter Name!"); db.collection('users').doc(auth.currentUser.uid).get().then(doc => { db.collection('rooms').add({ roomName: n, creatorId: auth.currentUser.uid, creatorName: doc.data().displayName, admins: [auth.currentUser.uid], members: [auth.currentUser.uid], adminOnlyMCQ: false, isPublic: p, createdAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert("Created!"); closeCreateRoom(); loadMyRooms(); }); }); }
 function joinRoomByFirebase() { const id = document.getElementById('joinRoomIdInput').value.trim(); if(!id) return alert("Enter ID!"); db.collection('rooms').doc(id).get().then(doc => { if(doc.exists) { db.collection('rooms').doc(id).update({ members: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid) }); closeJoinRoom(); enterRoom(doc.id, doc.data().roomName); } else { alert("Invalid ID!"); window.location.hash = '#dashboard'; } }); }
 function joinSpecificRoom(id) { document.getElementById('joinRoomIdInput').value = id; joinRoomByFirebase(); }
-function loadMyRooms() { const c = document.getElementById('roomsListContainer'); c.innerHTML = 'Loading...'; db.collection('rooms').where("members", "array-contains", auth.currentUser.uid).get().then(snap => { if(snap.empty) { c.innerHTML = '<p style="font-size:13px;">No rooms found.</p>'; return; } let html = ''; snap.forEach(doc => { let p = doc.data().isPublic ? '<span style="color:#17a2b8; font-size:10px;">🌍 Public</span>' : '<span style="color:#6c757d; font-size:10px;">🔒 Private</span>'; html += `<div class="q-card" style="display:flex; justify-content:space-between; align-items:center;"><div><b style="font-size:16px;">${doc.data().roomName}</b><br>${p}</div><button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button></div>`; }); c.innerHTML = html; }); }
+
+// ✅ FIXED MY ROOMS LOADING
+function loadMyRooms() { 
+    const c = document.getElementById('roomsListContainer'); c.innerHTML = 'Loading...'; 
+    if(!auth.currentUser) return;
+    db.collection('rooms').where("members", "array-contains", auth.currentUser.uid).get().then(snap => { 
+        if(snap.empty) { c.innerHTML = '<p style="font-size:13px;">No rooms found.</p>'; return; } 
+        let html = ''; 
+        snap.forEach(doc => { 
+            let p = doc.data().isPublic ? '<span style="color:#17a2b8; font-size:10px;">🌍 Public</span>' : '<span style="color:#6c757d; font-size:10px;">🔒 Private</span>'; 
+            html += `<div class="q-card" style="display:flex; justify-content:space-between; align-items:center;"><div><b style="font-size:16px;">${doc.data().roomName}</b><br>${p}</div><button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button></div>`; 
+        }); 
+        c.innerHTML = html; 
+    }).catch(err => {
+        console.error(err);
+        c.innerHTML = '<p style="color:red; font-size:13px;">Error loading rooms. Please refresh page.</p>';
+    }); 
+}
+
 function enterRoom(id, name) { currentRoomId = id; currentRoomName = name; document.getElementById('roomTitleText').innerText = name; document.getElementById('searchQuestion').value = ''; closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); openAuthorFolders = []; openTopicFolders = []; db.collection('rooms').doc(id).get().then(doc => { if(doc.exists) { currentRoomCreator = doc.data().creatorId; currentRoomAdmins = doc.data().admins || [currentRoomCreator]; currentRoomAdminOnlyMCQ = doc.data().adminOnlyMCQ || false; currentRoomIsPublic = doc.data().isPublic || false; const im = currentRoomAdmins.includes(auth.currentUser.uid); let eb = document.getElementById('editRoomMenuBtn'); if(eb) eb.style.display = im ? 'block' : 'none'; let dbBtn = document.getElementById('deleteRoomMenuBtn'); if(dbBtn) dbBtn.style.display = (auth.currentUser.uid === currentRoomCreator) ? 'block' : 'none'; let ab = document.getElementById('addMcqMainBtn'); if(ab) ab.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block'; loadRoomMembers(); loadRoomQuestions(); window.location.hash = '#room'; } }); }
 function leaveRoom() { if(confirm("Leave room?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid), admins: firebase.firestore.FieldValue.arrayRemove(auth.currentUser.uid) }).then(() => backToDashboard()); }
 function deleteRoom() { if(confirm("Delete permanently?")) db.collection('rooms').doc(currentRoomId).delete().then(() => backToDashboard()); }
@@ -282,6 +354,27 @@ function copyInviteLink() { navigator.clipboard.writeText(document.getElementByI
 function shareViaWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join my Study Room! 📚\nClick here: ${document.getElementById('shareLinkInput').value}`)}`, '_blank'); }
 function viewUserProfile(uid) { db.collection('users').doc(uid).get().then(doc => { if(doc.exists) { document.getElementById('viewProfileName').innerText=doc.data().displayName||"Unknown"; document.getElementById('viewProfileUsername').innerText=doc.data().username||""; document.getElementById('viewProfileBio').innerText=doc.data().bio||""; document.getElementById('viewProfileModal').style.display='flex'; } }); }
 function closeViewProfile() { document.getElementById('viewProfileModal').style.display='none'; }
+
+// ✅ FIXED DISCOVER LOADING
+function loadDiscoverRooms() { 
+    const c = document.getElementById('publicRoomsListContainer'); if(!c) return; c.innerHTML = 'Loading...'; 
+    db.collection('rooms').where('isPublic', '==', true).get().then(snap => { 
+        allPublicRooms = []; 
+        if(snap.empty) { c.innerHTML = '<p>No public rooms.</p>'; return; } 
+        let html = ''; 
+        snap.forEach(doc => { 
+            let r=doc.data(); r.id=doc.id; allPublicRooms.push(r); 
+            let im = r.members && auth.currentUser && r.members.includes(auth.currentUser.uid); 
+            let btn = im ? `<button class="btn" style="width:auto; padding:5px 10px; background:#6c757d; font-size:11px;" disabled>Joined</button>` : `<button class="btn" style="width:auto; padding:5px 10px; background:#28a745; font-size:11px;" onclick="joinSpecificRoom('${r.id}')">Join</button>`; 
+            html += `<div id="pub-room-${r.id}" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:10px; background:var(--card-bg);"><div><b style="color:var(--primary-btn); font-size:16px;">${r.roomName||'Room'}</b><br><span style="font-size:11px; color:var(--text-color);">By: ${r.creatorName||'Admin'} | 👥 ${r.members?r.members.length:1} Members</span></div>${btn}</div>`; 
+        }); 
+        c.innerHTML = html; 
+    }).catch(err => {
+        console.error(err);
+        c.innerHTML = '<p style="color:red; font-size:13px;">Error loading public rooms. Check internet.</p>';
+    }); 
+}
+
 function filterPublicRooms() { const q = document.getElementById('searchPublicRoom').value.toLowerCase(); allPublicRooms.forEach(r => { let c = document.getElementById(`pub-room-${r.id}`); if(c) c.style.display = (r.roomName && r.roomName.toLowerCase().includes(q)) ? "flex" : "none"; }); }
 function openEditRoomBox() { closeRoomMenuModal(); document.getElementById('editRoomBox').style.display = 'flex'; document.getElementById('editRoomNameInput').value = currentRoomName; document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ; let p = document.getElementById('editRoomPublicToggle'); if(p) p.checked = currentRoomIsPublic; }
 function closeEditRoomBox() { document.getElementById('editRoomBox').style.display = 'none'; }
