@@ -85,7 +85,7 @@
     <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()"><div class="round-profile-pic"><i class="fas fa-user"></i></div><span>Profile</span></div>
   </nav>
 
-  <!-- PROFILE MENU (Added Test History Button) -->
+  <!-- PROFILE MENU (Added Change Password) -->
   <div id="profileSettingsModal" class="profile-menu-overlay" onclick="closeProfileMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -93,6 +93,7 @@
       <button class="menu-btn" onclick="openProfileScreen()"><i class="fas fa-user-edit"></i> Edit Profile</button>
       <button class="menu-btn" onclick="openSolvedQuestionsScreen()"><i class="fas fa-check-circle" style="color: #28a745;"></i> My Solved Questions</button>
       <button class="menu-btn" onclick="openMockHistoryScreen()"><i class="fas fa-chart-line" style="color: #6f42c1;"></i> Mock Test History</button>
+      <button class="menu-btn" onclick="changePassword()"><i class="fas fa-key" style="color: #ff9800;"></i> Change Password</button>
       <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark / Light Mode</button>
       <button class="menu-btn" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
@@ -140,7 +141,6 @@
     <div id="revisionListContainer">No wrong answers saved yet!</div>
   </div>
 
-  <!-- 🌟 NEW: MOCK TEST HISTORY SCREEN -->
   <div class="auth-container" id="mockHistoryScreen" style="display: none; padding-bottom: 80px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
       <h2 style="margin: 0; color: #6f42c1; font-size: 20px;">📈 Mock Test History</h2>
@@ -149,7 +149,6 @@
     <div id="mockHistoryListContainer">No history found!</div>
   </div>
 
-  <!-- SOLVED ARCHIVE -->
   <div class="auth-container" id="solvedQuestionsScreen" style="display: none; padding-bottom: 80px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <h2 style="margin: 0; color: #28a745; font-size: 20px;">📚 Solved Archive</h2>
@@ -213,16 +212,36 @@
     </div>
   </div>
 
-  <!-- 🌟 UPDATE 5.1: MOCK TEST SETUP MODAL (With Topic Selector) -->
+  <!-- 🌟 NEW: STUDY MATERIAL SCREEN -->
+  <div id="studyMaterialScreen" style="display: none; padding: 0;">
+    <div class="room-top-nav">
+      <div class="title"><i class="fas fa-arrow-left" onclick="backToRoom()"></i> <span>📚 Study Materials</span></div>
+    </div>
+    <div class="room-content">
+      <button id="addMaterialMainBtn" class="btn" style="width: 100%; font-size: 15px; padding: 10px; margin-bottom: 15px; background: #17a2b8;" onclick="openAddMaterialModal()">➕ Add Notes / Topic</button>
+      <div class="input-group"><input type="text" id="searchMaterial" placeholder="🔍 Search notes..." onkeyup="filterMaterials()" class="styled-input"></div>
+      <div id="materialsListContainer">Loading study materials...</div>
+    </div>
+  </div>
+
+  <!-- 🌟 NEW: ADD STUDY MATERIAL MODAL -->
+  <div id="addMaterialModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAddMaterialModal(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+      <h3 style="color: #17a2b8; margin-top: 0;">✍️ Upload Study Material</h3>
+      <input type="text" id="matTopic" placeholder="Topic (e.g. History)" class="styled-input">
+      <input type="text" id="matTitle" placeholder="Title of the Note" class="styled-input">
+      <textarea id="matContent" placeholder="Write or paste your detailed notes here..." class="styled-input" style="height: 180px; resize: vertical;"></textarea>
+      <button class="btn" style="background:#28a745; margin-top:10px;" onclick="saveMaterialToFirebase()">Save Note</button>
+      <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeAddMaterialModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- MOCK TEST SETUP MODAL -->
   <div id="mockSetupModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeMockSetupModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: #6f42c1; margin-top:0; text-align:center;">📝 Mock Test Setup</h3>
-      
       <label style="font-weight:bold; font-size:14px; margin-top:10px; display:block;">Select Topics:</label>
-      <div id="mockTopicContainer" style="margin: 10px 0; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto; background: var(--bg-color);">
-         <!-- Topics Injected via JS -->
-      </div>
-
+      <div id="mockTopicContainer" style="margin: 10px 0; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto; background: var(--bg-color);"></div>
       <label style="font-weight:bold; font-size:14px;">Number of Questions:</label>
       <select id="mockQCount" class="styled-input" style="margin-top:5px;">
         <option value="10">10 Questions</option>
@@ -231,11 +250,7 @@
         <option value="100">100 Questions</option>
         <option value="all">All Available</option>
       </select>
-      
-      <label style="display:flex; align-items:center; gap:8px; margin-top:15px; font-weight:bold;">
-        <input type="checkbox" id="mockTimerToggle" style="transform:scale(1.2);"> ⏱️ Enable Timer (1 min/Q)
-      </label>
-
+      <label style="display:flex; align-items:center; gap:8px; margin-top:15px; font-weight:bold;"><input type="checkbox" id="mockTimerToggle" style="transform:scale(1.2);"> ⏱️ Enable Timer (1 min/Q)</label>
       <button class="btn" style="background:#6f42c1; margin-top:20px;" onclick="startMockTest()">🚀 Start Test</button>
       <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeMockSetupModal()">Cancel</button>
     </div>
@@ -277,7 +292,6 @@
     </div>
   </div>
 
-  <!-- OTHER MODALS (Upload, Assign Topic, Add MCQ) -->
   <div id="assignTopicModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAssignTopicModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">🏷️ Move to Topic</h3>
@@ -294,10 +308,13 @@
       <button class="menu-btn" onclick="deleteLongPressedQuestion()"><i class="fas fa-trash"></i> Delete Question</button>
     </div>
   </div>
+  
+  <!-- 🌟 ROOM MENU (Added Study Material Button) -->
   <div id="roomMenuModal" class="profile-menu-overlay" onclick="closeRoomMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
       <h3 style="margin: 0 0 15px 0; color: var(--text-color); text-align: center;">Room Options</h3>
+      <button class="menu-btn" onclick="openStudyMaterialScreen()"><i class="fas fa-book" style="color: #17a2b8;"></i> Study Material</button>
       <button class="menu-btn" onclick="openMembersModal()"><i class="fas fa-users"></i> View Members</button>
       <button class="menu-btn" onclick="copyRoomId()"><i class="fas fa-copy"></i> Copy Room ID</button>
       <button class="menu-btn" id="editRoomMenuBtn" onclick="openEditRoomBox()"><i class="fas fa-cog"></i> Room Settings</button>
@@ -305,6 +322,7 @@
       <button class="menu-btn" id="deleteRoomMenuBtn" onclick="deleteRoom()"><i class="fas fa-trash"></i> Delete Room</button>
     </div>
   </div>
+  
   <div id="addMcqChoiceModal" class="profile-menu-overlay" onclick="closeAddMcqChoiceModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -379,6 +397,14 @@
       <p style="font-weight: bold;">@<span id="viewProfileUsername">username</span></p>
       <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px; background: var(--bg-color);"><p style="margin:0;"><strong>Bio:</strong> <span id="viewProfileBio"></span></p></div>
       <button class="btn" style="background: #6c757d; margin-top: 15px;" onclick="closeViewProfile()">Close</button>
+    </div>
+  </div>
+  <div id="leaderboardModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeLeaderboard(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y:auto;" onclick="event.stopPropagation()">
+      <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Global Leaderboard</h3>
+      <p style="font-size:11px; text-align:center; color:#888;">Points earned from Practice & Mock Tests</p>
+      <div id="leaderboardList" style="margin-top: 15px; font-size: 14px;">Loading ranks...</div>
+      <button class="btn" style="padding: 6px; margin-top: 15px; background: #6c757d;" onclick="closeLeaderboard()">Close</button>
     </div>
   </div>
 
