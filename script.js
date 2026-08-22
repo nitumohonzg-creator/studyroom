@@ -25,13 +25,20 @@ let selectedSolvedIds = [];
 updateRevisionCount(); checkDailyStreak(); 
 
 // ---------------------------------
-// 🔐 AUTHENTICATION LOGIC 
+// 🔐 AUTHENTICATION & PASSWORD
 // ---------------------------------
 function toggleAuth(type) { document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none'; document.getElementById('signupForm').style.display = type === 'signup' ? 'block' : 'none'; }
 function signupUser() { const n=document.getElementById('signupName').value.trim(), e=document.getElementById('signupEmail').value.trim(), p=document.getElementById('signupPassword').value.trim(); if(!n||!e||!p) return alert("Fill fields"); auth.createUserWithEmailAndPassword(e, p).then(c => db.collection('users').doc(c.user.uid).set({ displayName: n, email: e, username: "", mobile: "", bio: "" })).then(() => { alert("Created!"); toggleAuth('login'); }).catch(e => alert(e.message)); }
 function loginUser() { auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value.trim()).then(() => handleHashChange()).catch(e => alert(e.message)); }
 function forgotPassword() { const e=document.getElementById('loginEmail').value.trim(); if(!e) return alert("Enter email!"); auth.sendPasswordResetEmail(e).then(() => alert("Sent!")).catch(e => alert(e.message)); }
 function logoutUser() { auth.signOut().then(() => { window.location.hash=''; window.location.reload(); }); }
+function changePassword() {
+    if(confirm("Send password reset email to " + auth.currentUser.email + "?")) {
+        auth.sendPasswordResetEmail(auth.currentUser.email).then(() => {
+            alert("Email sent! Please check your inbox."); closeProfileMenuModal();
+        }).catch(e => alert(e.message));
+    }
+}
 
 // -------------------------------
 // 🔥 DAILY STREAK
@@ -43,8 +50,8 @@ function recordQuestionAttempt() { const t = new Date().toDateString(); let s = 
 // -------------------------------
 // 📱 BOTTOM NAV & ROUTING
 // -------------------------------
-function updateBottomNav(activeId) { const nav = document.getElementById('bottomNavBar'); if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId) || document.getElementById('activeMockTestScreen').style.display === 'flex') { if(nav) nav.style.display = 'none'; return; } if(nav) nav.style.display = 'flex'; ['navHome','navDiscover','navRevision','navProfile'].forEach(id => { let el = document.getElementById(id); if(el) el.classList.remove('active'); }); if(activeId) { let el = document.getElementById(activeId); if(el) el.classList.add('active'); } }
-function hideAllScreens() { ['authBox','dashboardScreen','discoverScreen','revisionScreen','profileScreen','roomViewScreen','solvedQuestionsScreen','mockHistoryScreen'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; }); closeProfileMenuModal(); closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); clearSolvedSelection(); }
+function updateBottomNav(activeId) { const nav = document.getElementById('bottomNavBar'); if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId) || (window.location.hash === '#material' && currentRoomId) || document.getElementById('activeMockTestScreen').style.display === 'flex') { if(nav) nav.style.display = 'none'; return; } if(nav) nav.style.display = 'flex'; ['navHome','navDiscover','navRevision','navProfile'].forEach(id => { let el = document.getElementById(id); if(el) el.classList.remove('active'); }); if(activeId) { let el = document.getElementById(activeId); if(el) el.classList.add('active'); } }
+function hideAllScreens() { ['authBox','dashboardScreen','discoverScreen','revisionScreen','profileScreen','roomViewScreen','solvedQuestionsScreen','mockHistoryScreen','studyMaterialScreen'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; }); closeProfileMenuModal(); closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); clearSolvedSelection(); }
 
 window.addEventListener('hashchange', handleHashChange);
 function handleHashChange() {
@@ -57,11 +64,13 @@ function handleHashChange() {
   else if (hash === '#solved') { document.getElementById('solvedQuestionsScreen').style.display = 'block'; renderSolvedQuestions(); updateBottomNav(); } 
   else if (hash === '#mockhistory') { document.getElementById('mockHistoryScreen').style.display = 'block'; renderMockHistory(); updateBottomNav(); } 
   else if (hash === '#profile') { document.getElementById('profileScreen').style.display = 'block'; updateBottomNav('navProfile'); } 
-  else if (hash === '#room' && currentRoomId) { document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); } else { window.location.hash = '#dashboard'; }
+  else if (hash === '#room' && currentRoomId) { document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); }
+  else if (hash === '#material' && currentRoomId) { document.getElementById('studyMaterialScreen').style.display = 'block'; updateBottomNav(); loadMaterials(); }
+  else { window.location.hash = '#dashboard'; }
 }
 auth.onAuthStateChanged((user) => { if (user) { db.collection('users').doc(user.uid).get().then(() => { let p = localStorage.getItem('pendingJoin'); if (p) { localStorage.removeItem('pendingJoin'); document.getElementById('joinRoomIdInput').value = p; joinRoomByFirebase(); } else { handleHashChange(); } }); } else { window.location.hash = ''; handleHashChange(); } });
 
-// MODALS 
+// MODALS & FIXES
 function openProfileMenuModal() { document.getElementById('profileSettingsModal').style.display = 'flex'; if(auth.currentUser) db.collection('users').doc(auth.currentUser.uid).get().then(doc => { if(doc.exists) document.getElementById('menuWelcomeText').innerText = "Hi, " + doc.data().displayName + "!"; }); }
 function closeProfileMenuModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m = document.getElementById('profileSettingsModal'); if(m) m.style.display = 'none'; }
 function openRoomMenuModal() { document.getElementById('roomMenuModal').style.display = 'flex'; }
@@ -71,312 +80,193 @@ function closeAddMcqChoiceModal(e) { if(e && e.target.classList.contains('profil
 if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 function toggleDarkMode() { closeProfileMenuModal(); if(document.documentElement.getAttribute('data-theme') === 'dark') { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme', 'light'); } else { document.documentElement.setAttribute('data-theme', 'dark'); localStorage.setItem('theme', 'dark'); } }
 function backToDashboard() { window.location.hash = '#dashboard'; }
+function backToRoom() { window.location.hash = '#room'; handleHashChange(); }
 function openDiscoverRooms() { window.location.hash = '#discover'; }
 function openProfileScreen() { closeProfileMenuModal(); db.collection('users').doc(auth.currentUser.uid).get().then(doc => { if(doc.exists) { let d=doc.data(); document.getElementById('profileName').value=d.displayName||""; document.getElementById('profileUsername').value=d.username||""; document.getElementById('profileMobile').value=d.mobile||""; document.getElementById('profileBio').value=d.bio||""; window.location.hash='#profile'; } }); }
 function saveProfileData() { const n=document.getElementById('profileName').value.trim(); if(!n) return alert("Name required!"); db.collection('users').doc(auth.currentUser.uid).update({ displayName: n, username: document.getElementById('profileUsername').value.trim(), mobile: document.getElementById('profileMobile').value.trim(), bio: document.getElementById('profileBio').value.trim() }).then(() => { alert("Updated!"); window.location.hash='#dashboard'; }); }
+
+// 🌟 LEADERBOARD FIX
+function updateLeaderboardScore(points = 1) {
+    if(!auth.currentUser || !currentRoomId) return;
+    db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
+        db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid)
+          .set({ name: doc.data().displayName||"Unknown", score: firebase.firestore.FieldValue.increment(points) }, { merge: true });
+    });
+}
 function openLeaderboard() { let m = document.getElementById('leaderboardModal'), c = document.getElementById('leaderboardList'); if(!m || !c) return; m.style.display = 'flex'; c.innerHTML = "Loading..."; db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => { if(snap.empty) { c.innerHTML = "No scores yet. Take a Mock Test!"; return; } let html = '', rank = 1; snap.forEach(doc => { let d = doc.data(), medal = rank===1?'🥇':(rank===2?'🥈':(rank===3?'🥉':'🏅')); html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);"><span>${medal} <b>${d.name||'User'}</b></span><span style="color:#28a745; font-weight:bold;">${parseFloat(d.score||0).toFixed(2)} pts</span></div>`; rank++; }); c.innerHTML = html; }).catch(e => { c.innerHTML = `❌ Error`; }); }
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 
+
 // ---------------------------------
-// 🌟 1. MOCK TEST ENGINE (UPDATE 5.1 - Topic Filter & History)
+// 🌟 STUDY MATERIAL LOGIC (NEW)
+// ---------------------------------
+function openStudyMaterialScreen() { closeRoomMenuModal(); window.location.hash = '#material'; }
+function openAddMaterialModal() { document.getElementById('addMaterialModal').style.display = 'flex'; document.getElementById('matTopic').value = ''; document.getElementById('matTitle').value = ''; document.getElementById('matContent').value = ''; }
+function closeAddMaterialModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('addMaterialModal').style.display = 'none'; }
+
+function saveMaterialToFirebase() {
+    const topic = document.getElementById('matTopic').value.trim() || 'General';
+    const title = document.getElementById('matTitle').value.trim();
+    const content = document.getElementById('matContent').value.trim();
+    if(!title || !content) return alert("Title and Content are required!");
+
+    db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => {
+        const data = { topic: topic, title: title, content: content, creatorUid: auth.currentUser.uid, creatorName: userDoc.exists ? userDoc.data().displayName : "Unknown", createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+        db.collection('rooms').doc(currentRoomId).collection('materials').add(data).then(() => { alert("Note Added Successfully!"); closeAddMaterialModal(); loadMaterials(); });
+    });
+}
+
+let allCurrentMaterials = [];
+let openMatAuthorFolders = [];
+let openMatTopicFolders = [];
+
+function toggleMatAuthor(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openMatAuthorFolders.includes(id)) openMatAuthorFolders.push(id); } else { el.style.display = 'none'; openMatAuthorFolders = openMatAuthorFolders.filter(x => x !== id); } }
+function toggleMatTopic(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openMatTopicFolders.includes(id)) openMatTopicFolders.push(id); } else { el.style.display = 'none'; openMatTopicFolders = openMatTopicFolders.filter(x => x !== id); } }
+
+function filterMaterials() { const q = document.getElementById('searchMaterial').value.toLowerCase(); allCurrentMaterials.forEach(m => { const c = document.getElementById(`mat-card-${m.id}`); if(c) c.style.display = (m.title.toLowerCase().includes(q) || m.topic.toLowerCase().includes(q)) ? "block" : "none"; }); }
+
+function loadMaterials() {
+    const c = document.getElementById('materialsListContainer'); c.innerHTML = 'Loading study materials...';
+    const im = currentRoomAdmins.includes(auth.currentUser.uid);
+    let addBtn = document.getElementById('addMaterialMainBtn');
+    if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block';
+
+    db.collection('rooms').doc(currentRoomId).collection('materials').orderBy('createdAt', 'desc').get().then(snap => {
+        if (snap.empty) { c.innerHTML = 'No study materials found in this room.'; allCurrentMaterials = []; return; }
+        let aMap = {}; allCurrentMaterials = [];
+        
+        snap.forEach(doc => { 
+            let m = doc.data(); m.id = doc.id; m.topic = m.topic || 'General'; allCurrentMaterials.push(m);
+            let author = m.creatorName || "Unknown"; 
+            if(!aMap[author]) aMap[author] = {}; if(!aMap[author][m.topic]) aMap[author][m.topic] = [];
+            aMap[author][m.topic].push(m); 
+        });
+
+        let html = '';
+        for(let author in aMap) {
+            let authId = `mat-auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            let authOpen = openMatAuthorFolders.includes(authId) ? 'block' : 'none';
+            let totalAuthM = 0; let topicHtml = '';
+            for(let topic in aMap[author]) {
+                totalAuthM += aMap[author][topic].length;
+                let topicId = `mat-topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                let topicOpen = openMatTopicFolders.includes(topicId) ? 'block' : 'none';
+                topicHtml += `<div class="topic-folder"><div class="topic-title" onclick="toggleMatTopic('${topicId}')"><span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span></div><div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">${renderMaterialsHTML(aMap[author][topic], im)}</div></div>`;
+            }
+            html += `<div class="q-card" style="border: 2px solid #17a2b8;"><h4 style="color:#17a2b8; cursor:pointer; font-size:16px; margin:0;" onclick="toggleMatAuthor('${authId}')">👤 Notes by ${author} (${totalAuthM}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`;
+        }
+        c.innerHTML = html;
+    });
+}
+
+function renderMaterialsHTML(arr, im) {
+    let html = '';
+    arr.forEach(m => {
+        let delBtn = (m.creatorUid === auth.currentUser.uid || im) ? `<button class="btn" style="width:auto; padding:3px 8px; background:#dc3545; font-size:10px; margin:0;" onclick="deleteMaterial('${m.id}')"><i class="fas fa-trash"></i></button>` : '';
+        html += `<div id="mat-card-${m.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0; color:var(--primary-btn);">${m.title}</h4>
+                        ${delBtn}
+                    </div>
+                    <p style="white-space: pre-wrap; font-size:13px; color:var(--text-color); margin:0;">${m.content}</p>
+                 </div>`;
+    });
+    return html;
+}
+
+function deleteMaterial(id) { if(confirm("Delete this note permanently?")) { db.collection('rooms').doc(currentRoomId).collection('materials').doc(id).delete().then(() => { alert("Deleted!"); loadMaterials(); }); } }
+
+
+// ---------------------------------
+// 🌟 MOCK TEST ENGINE
 // ---------------------------------
 let mockTestQuestions = [];
 let mockCurrentIndex = 0;
 let mockUserAnswers = {}; 
 let mockTimer = null;
 let mockTimeLeft = 0;
-let currentMockTopics = []; // To save in history
+let currentMockTopics = [];
 
 function openMockSetupModal() { 
-    document.getElementById('mockSetupModal').style.display = 'flex'; 
-    document.getElementById('mockTimerToggle').checked = false; 
-
-    // Generate Topic Checkboxes dynamically
+    document.getElementById('mockSetupModal').style.display = 'flex'; document.getElementById('mockTimerToggle').checked = false; 
     const container = document.getElementById('mockTopicContainer');
     let topics = [...new Set(allCurrentQuestions.map(q => q.topic))];
-    
-    if(topics.length === 0) {
-        container.innerHTML = '<p style="font-size:12px; color:red;">No topics available.</p>';
-        return;
-    }
-
-    let html = `<label style="font-size:13px; display:block; margin-bottom:8px; font-weight:bold; border-bottom:1px solid var(--border-color); padding-bottom:5px;">
-                  <input type="checkbox" id="selectAllTopics" checked onchange="toggleSelectAllTopics(this)" style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> Select All
-                </label>`;
-    topics.forEach(t => {
-        html += `<label style="display:block; margin:5px 0; font-size:13px;">
-                   <input type="checkbox" class="topic-chk" value="${t}" checked style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> ${t}
-                 </label>`;
-    });
+    if(topics.length === 0) { container.innerHTML = '<p style="font-size:12px; color:red;">No topics available.</p>'; return; }
+    let html = `<label style="font-size:13px; display:block; margin-bottom:8px; font-weight:bold; border-bottom:1px solid var(--border-color); padding-bottom:5px;"> <input type="checkbox" id="selectAllTopics" checked onchange="toggleSelectAllTopics(this)" style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> Select All </label>`;
+    topics.forEach(t => { html += `<label style="display:block; margin:5px 0; font-size:13px;"> <input type="checkbox" class="topic-chk" value="${t}" checked style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> ${t} </label>`; });
     container.innerHTML = html;
 }
-
 function closeMockSetupModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockSetupModal').style.display = 'none'; }
-
-function toggleSelectAllTopics(master) {
-    document.querySelectorAll('.topic-chk').forEach(c => c.checked = master.checked);
-}
+function toggleSelectAllTopics(master) { document.querySelectorAll('.topic-chk').forEach(c => c.checked = master.checked); }
 
 function startMockTest() {
-    if(allCurrentQuestions.length === 0) return alert("No questions available in this room!");
-    
-    currentMockTopics = [];
-    document.querySelectorAll('.topic-chk:checked').forEach(c => currentMockTopics.push(c.value));
+    if(allCurrentQuestions.length === 0) return alert("No questions available!");
+    currentMockTopics = []; document.querySelectorAll('.topic-chk:checked').forEach(c => currentMockTopics.push(c.value));
     if(currentMockTopics.length === 0) return alert("Please select at least one topic!");
-
     let filteredQ = allCurrentQuestions.filter(q => currentMockTopics.includes(q.topic));
     if(filteredQ.length === 0) return alert("No questions found in selected topics!");
-
-    const countVal = document.getElementById('mockQCount').value;
-    const useTimer = document.getElementById('mockTimerToggle').checked;
-    
+    const countVal = document.getElementById('mockQCount').value; const useTimer = document.getElementById('mockTimerToggle').checked;
     let shuffledQ = [...filteredQ].sort(() => Math.random() - 0.5);
-    let qCount = countVal === 'all' ? shuffledQ.length : parseInt(countVal);
-    if(qCount > shuffledQ.length) qCount = shuffledQ.length;
-    
+    let qCount = countVal === 'all' ? shuffledQ.length : parseInt(countVal); if(qCount > shuffledQ.length) qCount = shuffledQ.length;
     mockTestQuestions = shuffledQ.slice(0, qCount);
-    
-    mockTestQuestions.forEach(q => {
-        let opts = [ {id: 'A', text: q.optionA}, {id: 'B', text: q.optionB}, {id: 'C', text: q.optionC}, {id: 'D', text: q.optionD} ];
-        q.shuffledOptions = opts.sort(() => Math.random() - 0.5);
-    });
-
-    mockCurrentIndex = 0;
-    mockUserAnswers = {};
-    
-    if(useTimer) {
-        mockTimeLeft = qCount * 60; // 1 min per question
-        document.getElementById('mockTimerDisplay').style.display = 'inline-block';
-        updateTimerUI();
-        mockTimer = setInterval(() => {
-            mockTimeLeft--; updateTimerUI();
-            if(mockTimeLeft <= 0) { clearInterval(mockTimer); alert("⏱️ Time's up!"); submitMockTestEarly(); }
-        }, 1000);
-    } else {
-        document.getElementById('mockTimerDisplay').style.display = 'none';
-    }
-
-    closeMockSetupModal();
-    document.getElementById('roomViewScreen').style.display = 'none';
-    document.getElementById('activeMockTestScreen').style.display = 'flex';
-    updateBottomNav(); 
-    renderMockQuestion();
+    mockTestQuestions.forEach(q => { let opts = [ {id: 'A', text: q.optionA}, {id: 'B', text: q.optionB}, {id: 'C', text: q.optionC}, {id: 'D', text: q.optionD} ]; q.shuffledOptions = opts.sort(() => Math.random() - 0.5); });
+    mockCurrentIndex = 0; mockUserAnswers = {};
+    if(useTimer) { mockTimeLeft = qCount * 60; document.getElementById('mockTimerDisplay').style.display = 'inline-block'; updateTimerUI(); mockTimer = setInterval(() => { mockTimeLeft--; updateTimerUI(); if(mockTimeLeft <= 0) { clearInterval(mockTimer); alert("⏱️ Time's up!"); submitMockTestEarly(); } }, 1000); } else { document.getElementById('mockTimerDisplay').style.display = 'none'; }
+    closeMockSetupModal(); document.getElementById('roomViewScreen').style.display = 'none'; document.getElementById('activeMockTestScreen').style.display = 'flex'; updateBottomNav(); renderMockQuestion();
 }
-
-function updateTimerUI() {
-    let m = Math.floor(mockTimeLeft / 60); let s = mockTimeLeft % 60;
-    document.getElementById('mockTimerDisplay').innerText = `⏱️ ${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-}
-
-function renderMockQuestion() {
-    const q = mockTestQuestions[mockCurrentIndex];
-    document.getElementById('mockProgressText').innerText = `Q: ${mockCurrentIndex + 1}/${mockTestQuestions.length} (${q.topic})`;
-    document.getElementById('mockQuestionText').innerText = q.question;
-    
-    let optsHtml = '';
-    q.shuffledOptions.forEach(opt => {
-        let isSel = mockUserAnswers[q.id] === opt.id ? 'selected' : '';
-        optsHtml += `<button class="mock-opt-btn ${isSel}" onclick="selectMockOption('${q.id}', '${opt.id}')">${opt.text}</button>`;
-    });
-    document.getElementById('mockOptionsContainer').innerHTML = optsHtml;
-    document.getElementById('mockNextBtn').innerText = (mockCurrentIndex === mockTestQuestions.length - 1) ? "Submit Test ✅" : "Next ➡️";
-}
-
+function updateTimerUI() { let m = Math.floor(mockTimeLeft / 60); let s = mockTimeLeft % 60; document.getElementById('mockTimerDisplay').innerText = `⏱️ ${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`; }
+function renderMockQuestion() { const q = mockTestQuestions[mockCurrentIndex]; document.getElementById('mockProgressText').innerText = `Q: ${mockCurrentIndex + 1}/${mockTestQuestions.length} (${q.topic})`; document.getElementById('mockQuestionText').innerText = q.question; let optsHtml = ''; q.shuffledOptions.forEach(opt => { let isSel = mockUserAnswers[q.id] === opt.id ? 'selected' : ''; optsHtml += `<button class="mock-opt-btn ${isSel}" onclick="selectMockOption('${q.id}', '${opt.id}')">${opt.text}</button>`; }); document.getElementById('mockOptionsContainer').innerHTML = optsHtml; document.getElementById('mockNextBtn').innerText = (mockCurrentIndex === mockTestQuestions.length - 1) ? "Submit Test ✅" : "Next ➡️"; }
 function selectMockOption(qId, origOptId) { mockUserAnswers[qId] = origOptId; renderMockQuestion(); }
 function prevMockQuestion() { if(mockCurrentIndex > 0) { mockCurrentIndex--; renderMockQuestion(); } }
 function nextMockQuestion() { if(mockCurrentIndex < mockTestQuestions.length - 1) { mockCurrentIndex++; renderMockQuestion(); } else { submitMockTestEarly(); } }
-
 function submitMockTestEarly() {
-    if(mockTimer) clearInterval(mockTimer);
-    document.getElementById('activeMockTestScreen').style.display = 'none';
-    
+    if(mockTimer) clearInterval(mockTimer); document.getElementById('activeMockTestScreen').style.display = 'none';
     let correct = 0, wrong = 0, unattempted = 0;
+    mockTestQuestions.forEach(q => { let uAns = mockUserAnswers[q.id]; if(!uAns) { unattempted++; } else if(uAns === q.correct) { correct++; } else { wrong++; } });
+    let finalScore = (correct * 1) - (wrong * 0.25); if(finalScore < 0) finalScore = 0; let accuracy = (correct + wrong) > 0 ? Math.round((correct / (correct + wrong)) * 100) : 0;
+    document.getElementById('reportFinalScore').innerText = finalScore.toFixed(2); document.getElementById('reportCorrect').innerText = correct; document.getElementById('reportWrong').innerText = wrong; document.getElementById('reportUnattempted').innerText = unattempted; document.getElementById('reportAccuracy').innerText = accuracy + "%";
     
-    mockTestQuestions.forEach(q => {
-        let uAns = mockUserAnswers[q.id];
-        if(!uAns) { unattempted++; }
-        else if(uAns === q.correct) { correct++; }
-        else { wrong++; }
-    });
-
-    let finalScore = (correct * 1) - (wrong * 0.25);
-    if(finalScore < 0) finalScore = 0;
-    let accuracy = (correct + wrong) > 0 ? Math.round((correct / (correct + wrong)) * 100) : 0;
-
-    document.getElementById('reportFinalScore').innerText = finalScore.toFixed(2);
-    document.getElementById('reportCorrect').innerText = correct;
-    document.getElementById('reportWrong').innerText = wrong;
-    document.getElementById('reportUnattempted').innerText = unattempted;
-    document.getElementById('reportAccuracy').innerText = accuracy + "%";
+    let resultObj = { date: new Date().toLocaleString(), room: currentRoomName || "Unknown", topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '), totalQ: mockTestQuestions.length, attempted: correct + wrong, correct: correct, wrong: wrong, score: finalScore.toFixed(2), accuracy: accuracy };
+    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; history.push(resultObj); localStorage.setItem('studyRoomMockHistory', JSON.stringify(history));
     
-    // Save to Mock History
-    let resultObj = {
-        date: new Date().toLocaleString(),
-        room: currentRoomName || "Unknown",
-        topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '),
-        totalQ: mockTestQuestions.length,
-        attempted: correct + wrong,
-        correct: correct,
-        wrong: wrong,
-        score: finalScore.toFixed(2),
-        accuracy: accuracy
-    };
-    
-    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || [];
-    history.push(resultObj);
-    localStorage.setItem('studyRoomMockHistory', JSON.stringify(history));
-    
-    // Firebase Leaderboard
-    if(auth.currentUser && currentRoomId && finalScore > 0) {
-        db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
-            db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid)
-              .set({ name: doc.data().displayName || "Unknown", score: firebase.firestore.FieldValue.increment(finalScore) }, { merge: true });
-        });
-    }
-
+    updateLeaderboardScore(finalScore); // Update Firebase Leaderboard
     document.getElementById('mockReportModal').style.display = 'flex';
 }
+function closeMockReport(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockReportModal').style.display = 'none'; window.location.hash = '#room'; handleHashChange(); }
 
-function closeMockReport(e) {
-    if(e && e.target.classList.contains('profile-menu-sheet')) return;
-    document.getElementById('mockReportModal').style.display = 'none';
-    window.location.hash = '#room'; 
-    handleHashChange();
-}
-
-// ---------------------------------
-// 🌟 MOCK TEST HISTORY SCREEN
-// ---------------------------------
 function openMockHistoryScreen() { closeProfileMenuModal(); window.location.hash = '#mockhistory'; }
+function renderMockHistory() { const c = document.getElementById('mockHistoryListContainer'); let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; } let html = ''; history.reverse().forEach(h => { html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);"> <div style="display:flex; justify-content:space-between; margin-bottom:5px;"> <b style="color:#6f42c1; font-size:14px;">${h.room}</b> <span style="font-size:10px; color:#888;">${h.date}</span> </div> <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p> <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;"> <span style="color:#28a745;">Score: ${h.score}</span> <span style="color:#007bff;">Acc: ${h.accuracy}%</span> </div> <div style="font-size:11px; display:flex; gap:10px; color:#555;"> <span>Total: ${h.totalQ}</span> <span>✅ ${h.correct}</span> <span>❌ ${h.wrong}</span> </div> </div>`; }); history.reverse(); c.innerHTML = html; }
 
-function renderMockHistory() {
-    const c = document.getElementById('mockHistoryListContainer');
-    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || [];
-    if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; }
-    
-    let html = '';
-    history.reverse().forEach(h => {
-        html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);">
-                   <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                     <b style="color:#6f42c1; font-size:14px;">${h.room}</b>
-                     <span style="font-size:10px; color:#888;">${h.date}</span>
-                   </div>
-                   <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p>
-                   <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;">
-                     <span style="color:#28a745;">Score: ${h.score}</span>
-                     <span style="color:#007bff;">Acc: ${h.accuracy}%</span>
-                   </div>
-                   <div style="font-size:11px; display:flex; gap:10px; color:#555;">
-                     <span>Total: ${h.totalQ}</span>
-                     <span>✅ ${h.correct}</span>
-                     <span>❌ ${h.wrong}</span>
-                   </div>
-                 </div>`;
-    });
-    history.reverse(); // put it back
-    c.innerHTML = html;
-}
 
 // ---------------------------------
-// 🌟 2. SOLVED ARCHIVE & RE-ATTEMPT
+// 🌟 SOLVED ARCHIVE & PRACTICE FEED 
 // ---------------------------------
 function openSolvedQuestionsScreen() { closeProfileMenuModal(); window.location.hash = '#solved'; }
-
-function renderSolvedQuestions() {
-  const c = document.getElementById('solvedQuestionsListContainer'); 
-  if (correctQuestions.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">You haven\'t solved any questions yet!</p>'; document.getElementById('solvedSelectionBar').style.display = 'none'; return; }
-  
-  let html = ''; 
-  correctQuestions.reverse().forEach((i) => { 
-    let isChecked = selectedSolvedIds.includes(i.id) ? "checked" : "";
-    html += `<div class="q-card" style="border:1px solid #28a745; margin-bottom:15px; background:var(--bg-color); position:relative;">
-               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #28a745; padding-bottom:5px; margin-bottom:10px;">
-                  <span style="color:#28a745; font-size:11px; font-weight:bold;">Room: ${i.room || 'General'}</span>
-                  <input type="checkbox" class="solved-chk" value="${i.id}" ${isChecked} onchange="handleSolvedCheckboxChange(this)" style="transform:scale(1.3); accent-color:#28a745;">
-               </div>
-               ${i.html}
-             </div>`; 
-  }); correctQuestions.reverse(); 
-  c.innerHTML = html;
-  updateSolvedSelectionBar();
-}
-
-function handleSolvedCheckboxChange(cb) {
-  if(cb.checked) { if(!selectedSolvedIds.includes(cb.value)) selectedSolvedIds.push(cb.value); } 
-  else { selectedSolvedIds = selectedSolvedIds.filter(id => id !== cb.value); }
-  updateSolvedSelectionBar();
-}
-
-function toggleSelectAllSolved() {
-  const checkboxes = document.querySelectorAll('.solved-chk');
-  if(checkboxes.length === 0) return;
-  let allChecked = true; checkboxes.forEach(c => { if(!c.checked) allChecked = false; });
-  checkboxes.forEach(c => { c.checked = !allChecked; if(!allChecked && !selectedSolvedIds.includes(c.value)) { selectedSolvedIds.push(c.value); } else if(allChecked) { selectedSolvedIds = selectedSolvedIds.filter(id => id !== c.value); } });
-  updateSolvedSelectionBar();
-}
-
-function updateSolvedSelectionBar() {
-  const bar = document.getElementById('solvedSelectionBar'); const txt = document.getElementById('solvedSelectedCountText');
-  if(selectedSolvedIds.length > 0) { bar.style.display = 'flex'; txt.innerText = `${selectedSolvedIds.length} Selected`; } 
-  else { bar.style.display = 'none'; }
-}
-
+function renderSolvedQuestions() { const c = document.getElementById('solvedQuestionsListContainer'); if (correctQuestions.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">You haven\'t solved any questions yet!</p>'; document.getElementById('solvedSelectionBar').style.display = 'none'; return; } let html = ''; correctQuestions.reverse().forEach((i) => { let isChecked = selectedSolvedIds.includes(i.id) ? "checked" : ""; html += `<div class="q-card" style="border:1px solid #28a745; margin-bottom:15px; background:var(--bg-color); position:relative;"> <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #28a745; padding-bottom:5px; margin-bottom:10px;"> <span style="color:#28a745; font-size:11px; font-weight:bold;">Room: ${i.room || 'General'}</span> <input type="checkbox" class="solved-chk" value="${i.id}" ${isChecked} onchange="handleSolvedCheckboxChange(this)" style="transform:scale(1.3); accent-color:#28a745;"> </div> ${i.html} </div>`; }); correctQuestions.reverse(); c.innerHTML = html; updateSolvedSelectionBar(); }
+function handleSolvedCheckboxChange(cb) { if(cb.checked) { if(!selectedSolvedIds.includes(cb.value)) selectedSolvedIds.push(cb.value); } else { selectedSolvedIds = selectedSolvedIds.filter(id => id !== cb.value); } updateSolvedSelectionBar(); }
+function toggleSelectAllSolved() { const checkboxes = document.querySelectorAll('.solved-chk'); if(checkboxes.length === 0) return; let allChecked = true; checkboxes.forEach(c => { if(!c.checked) allChecked = false; }); checkboxes.forEach(c => { c.checked = !allChecked; if(!allChecked && !selectedSolvedIds.includes(c.value)) { selectedSolvedIds.push(c.value); } else if(allChecked) { selectedSolvedIds = selectedSolvedIds.filter(id => id !== c.value); } }); updateSolvedSelectionBar(); }
+function updateSolvedSelectionBar() { const bar = document.getElementById('solvedSelectionBar'); const txt = document.getElementById('solvedSelectedCountText'); if(selectedSolvedIds.length > 0) { bar.style.display = 'flex'; txt.innerText = `${selectedSolvedIds.length} Selected`; } else { bar.style.display = 'none'; } }
 function clearSolvedSelection() { selectedSolvedIds = []; document.querySelectorAll('.solved-chk').forEach(c => c.checked = false); updateSolvedSelectionBar(); }
+function reattemptSelectedQuestions() { if(selectedSolvedIds.length === 0) return; correctQuestions = correctQuestions.filter(item => !selectedSolvedIds.includes(item.id)); localStorage.setItem('studyRoomCorrect', JSON.stringify(correctQuestions)); for (let i = 0; i < localStorage.length; i++) { let key = localStorage.key(i); if (key && key.startsWith('attempted_')) { let arr = JSON.parse(localStorage.getItem(key)) || []; arr = arr.filter(id => !selectedSolvedIds.includes(id)); localStorage.setItem(key, JSON.stringify(arr)); } } alert(`🔄 ${selectedSolvedIds.length} questions moved back to Practice Feed!`); selectedSolvedIds = []; renderSolvedQuestions(); }
 
-function reattemptSelectedQuestions() {
-    if(selectedSolvedIds.length === 0) return;
-    correctQuestions = correctQuestions.filter(item => !selectedSolvedIds.includes(item.id));
-    localStorage.setItem('studyRoomCorrect', JSON.stringify(correctQuestions));
-    
-    for (let i = 0; i < localStorage.length; i++) {
-        let key = localStorage.key(i);
-        if (key && key.startsWith('attempted_')) {
-            let arr = JSON.parse(localStorage.getItem(key)) || [];
-            arr = arr.filter(id => !selectedSolvedIds.includes(id));
-            localStorage.setItem(key, JSON.stringify(arr));
-        }
-    }
-    
-    alert(`🔄 ${selectedSolvedIds.length} questions moved back to Practice Feed!`);
-    selectedSolvedIds = [];
-    renderSolvedQuestions();
-}
-
-// ---------------------------------
-// 🌟 PRACTICE FEED LOGIC (NESTED FOLDERS)
-// ---------------------------------
 function toggleAuthorQuestions(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openAuthorFolders.includes(id)) openAuthorFolders.push(id); } else { el.style.display = 'none'; openAuthorFolders = openAuthorFolders.filter(x => x !== id); } }
 function toggleTopicQuestions(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openTopicFolders.includes(id)) openTopicFolders.push(id); } else { el.style.display = 'none'; openTopicFolders = openTopicFolders.filter(x => x !== id); } }
 function filterQuestions() { const q = document.getElementById('searchQuestion').value.toLowerCase(); allCurrentQuestions.forEach(x => { const c = document.getElementById(`q-card-${x.id}`); if(c) c.style.display = (x.question.toLowerCase().includes(q) || (x.topic && x.topic.toLowerCase().includes(q))) ? "block" : "none"; }); }
 
 function loadRoomQuestions() {
-  const c = document.getElementById('questionsListContainer'); c.innerHTML = 'Loading...'; 
-  let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
-  
+  const c = document.getElementById('questionsListContainer'); c.innerHTML = 'Loading...'; let attemptedList = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || [];
   db.collection('rooms').doc(currentRoomId).collection('questions').orderBy('createdAt', 'desc').get().then(snap => {
     if (snap.empty) { c.innerHTML = 'No questions found.'; allCurrentQuestions = []; return; }
     let aMap = {}; allCurrentQuestions = [];
-    
-    snap.forEach(doc => { 
-        let q = doc.data(); q.id = doc.id; q.topic = q.topic || 'General'; allCurrentQuestions.push(q); 
-        if(attemptedList.includes(q.id)) return; 
-        let author = q.creatorName || "Unknown"; 
-        if(!aMap[author]) aMap[author] = {}; if(!aMap[author][q.topic]) aMap[author][q.topic] = [];
-        aMap[author][q.topic].push(q); 
-    });
-
+    snap.forEach(doc => { let q = doc.data(); q.id = doc.id; q.topic = q.topic || 'General'; allCurrentQuestions.push(q); if(attemptedList.includes(q.id)) return; let author = q.creatorName || "Unknown"; if(!aMap[author]) aMap[author] = {}; if(!aMap[author][q.topic]) aMap[author][q.topic] = []; aMap[author][q.topic].push(q); });
     const im = currentRoomAdmins.includes(auth.currentUser.uid); 
     if(Object.keys(aMap).length === 0) { c.innerHTML = '<p style="color:#28a745; font-weight:bold;">🎉 All questions attempted! Check Profile to Re-attempt.</p>'; return; }
-    
     let html = ''; 
     for(let author in aMap) { 
-      let authId = `auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; let authOpen = openAuthorFolders.includes(authId) ? 'block' : 'none'; 
-      let totalAuthQ = 0; let topicHtml = '';
+      let authId = `auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; let authOpen = openAuthorFolders.includes(authId) ? 'block' : 'none'; let totalAuthQ = 0; let topicHtml = '';
       for(let topic in aMap[author]) {
-          totalAuthQ += aMap[author][topic].length;
-          let topicId = `topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`; let topicOpen = openTopicFolders.includes(topicId) ? 'block' : 'none';
+          totalAuthQ += aMap[author][topic].length; let topicId = `topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`; let topicOpen = openTopicFolders.includes(topicId) ? 'block' : 'none';
           let selectBtnHtml = im ? `<div style="margin-bottom:10px; text-align:right;"><button class="btn" style="width:auto; padding:5px 12px; font-size:11px; margin:0; background:#6c757d;" onclick="toggleSelectTopic('${topicId}')">☑ Select All in ${topic}</button></div>` : '';
-          
           topicHtml += `<div class="topic-folder"><div class="topic-title" onclick="toggleTopicQuestions('${topicId}')"><span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span></div><div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">${selectBtnHtml}${renderQuestionsHTML(aMap[author][topic], im)}</div></div>`;
       }
       html += `<div class="q-card" style="border: 2px solid var(--border-color);"><h4 style="color:var(--primary-btn); cursor:pointer; font-size:16px; margin:0;" onclick="toggleAuthorQuestions('${authId}')">👤 MCQ by ${author} (${totalAuthQ}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`; 
@@ -385,23 +275,14 @@ function loadRoomQuestions() {
   });
 }
 
-function renderQuestionsHTML(arr, im) {
-  let html = ''; arr.forEach((q) => {
-    let t = q.timeLimit ? `<span style="background:#ffeeba; color:#856404; padding:2px 5px; border-radius:3px; font-size:11px;">⏳ ${q.timeLimit}s</span>` : '';
-    let isChecked = selectedQuestionIds.includes(q.id) ? "checked" : "";
-    let chk = (q.creatorUid === auth.currentUser.uid || im) ? `<input type="checkbox" class="bulk-delete-chk" value="${q.id}" ${isChecked} onchange="handleCheckboxChange(this)" style="transform:scale(1.3); margin-right:10px; accent-color:#dc3545;" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">` : '';
-    let opt = [{text: q.optionA, let: 'A'}, {text: q.optionB, let: 'B'}, {text: q.optionC, let: 'C'}, {text: q.optionD, let: 'D'}]; opt.sort(() => Math.random() - 0.5); 
-    let oh = ''; opt.forEach(o => { oh += `<button id="btn-${q.id}-${o.let}" class="quiz-opt-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="checkAnswer('${q.id}', '${o.let}', '${q.correct}', '${q.question.replace(/'/g, "\\'")}')">${o.text}</button>`; });
-    let lp = (q.creatorUid === auth.currentUser.uid || im) ? `onmousedown="startLongPress('${q.id}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" ontouchstart="startLongPress('${q.id}')" ontouchend="cancelLongPress()"` : "";
-    html += `<div id="q-card-${q.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px; cursor:pointer;" ${lp}><div style="font-weight:bold; margin-bottom:10px; display:flex; align-items:flex-start;">${chk} <div style="flex:1;">Q. ${q.question} ${t}</div></div><div id="mcq-options-${q.id}" style="display:flex; flex-direction:column; gap:5px;">${oh}</div><p id="feedback-${q.id}" style="margin-top:10px; font-size:13px; font-weight:bold; display:none;"></p></div>`;
-  }); return html;
-}
+function renderQuestionsHTML(arr, im) { let html = ''; arr.forEach((q) => { let t = q.timeLimit ? `<span style="background:#ffeeba; color:#856404; padding:2px 5px; border-radius:3px; font-size:11px;">⏳ ${q.timeLimit}s</span>` : ''; let isChecked = selectedQuestionIds.includes(q.id) ? "checked" : ""; let chk = (q.creatorUid === auth.currentUser.uid || im) ? `<input type="checkbox" class="bulk-delete-chk" value="${q.id}" ${isChecked} onchange="handleCheckboxChange(this)" style="transform:scale(1.3); margin-right:10px; accent-color:#dc3545;" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">` : ''; let opt = [{text: q.optionA, let: 'A'}, {text: q.optionB, let: 'B'}, {text: q.optionC, let: 'C'}, {text: q.optionD, let: 'D'}]; opt.sort(() => Math.random() - 0.5); let oh = ''; opt.forEach(o => { oh += `<button id="btn-${q.id}-${o.let}" class="quiz-opt-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="checkAnswer('${q.id}', '${o.let}', '${q.correct}', '${q.question.replace(/'/g, "\\'")}')">${o.text}</button>`; }); let lp = (q.creatorUid === auth.currentUser.uid || im) ? `onmousedown="startLongPress('${q.id}')" onmouseup="cancelLongPress()" onmouseleave="cancelLongPress()" ontouchstart="startLongPress('${q.id}')" ontouchend="cancelLongPress()"` : ""; html += `<div id="q-card-${q.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px; cursor:pointer;" ${lp}><div style="font-weight:bold; margin-bottom:10px; display:flex; align-items:flex-start;">${chk} <div style="flex:1;">Q. ${q.question} ${t}</div></div><div id="mcq-options-${q.id}" style="display:flex; flex-direction:column; gap:5px;">${oh}</div><p id="feedback-${q.id}" style="margin-top:10px; font-size:13px; font-weight:bold; display:none;"></p></div>`; }); return html; }
 
 function checkAnswer(qId, sOpt, cOpt, qText) {
   document.querySelectorAll(`[id^="btn-${qId}-"]`).forEach(b => b.disabled = true); const cb = document.getElementById(`btn-${qId}-${sOpt}`), fb = document.getElementById(`feedback-${qId}`); recordQuestionAttempt(); 
   let a = JSON.parse(localStorage.getItem(`attempted_${currentRoomId}`)) || []; if(!a.includes(qId)) { a.push(qId); localStorage.setItem(`attempted_${currentRoomId}`, JSON.stringify(a)); }
   if (sOpt === cOpt) { 
     cb.style.background = "#d4edda"; cb.style.color = "#155724"; cb.style.borderColor = "#28a745"; fb.innerText = "✅ Correct!"; fb.style.color = "#28a745"; 
+    updateLeaderboardScore(1); // Call the fixed function for +1 point!
     if (!correctQuestions.some(item => item.id === qId)) { let ce = document.getElementById(`q-card-${qId}`); let cc = ce.cloneNode(true); let chk = cc.querySelector('.bulk-delete-chk'); if(chk) chk.remove(); correctQuestions.push({ id: qId, html: cc.innerHTML, room: currentRoomName }); localStorage.setItem('studyRoomCorrect', JSON.stringify(correctQuestions)); }
     setTimeout(() => { let c = document.getElementById(`q-card-${qId}`); if(c) c.style.display = 'none'; }, 1000); 
   } else { 
@@ -415,7 +296,6 @@ function openRevisionBox() { window.location.hash = '#revision'; }
 function renderRevisionBox() { const c = document.getElementById('revisionListContainer'); if (wrongQuestions.length === 0) { c.innerHTML = '<p>Your revision list is empty!</p>'; return; } let html = ''; wrongQuestions.forEach((i, idx) => { html += `<div class="q-card" style="border:1px solid #dc3545; margin-bottom:15px;"><p style="color:#dc3545; font-size:12px; font-weight:bold; border-bottom:1px solid #dc3545; padding-bottom:5px; margin-bottom:10px;">Revision Item #${idx + 1}</p>${i.html}</div>`; }); c.innerHTML = html; }
 function updateRevisionCount() { const b = document.getElementById('revCount'); if(b) b.innerText = wrongQuestions.length; }
 
-// Bulk Logic & Database
 function handleCheckboxChange(cb) { if(cb.checked) { if(!selectedQuestionIds.includes(cb.value)) selectedQuestionIds.push(cb.value); } else { selectedQuestionIds = selectedQuestionIds.filter(id => id !== cb.value); } updateSelectionBar(); }
 function updateSelectionBar() { const bar = document.getElementById('selectionActionBar'); const txt = document.getElementById('selectedCountText'); if(selectedQuestionIds.length > 0) { bar.style.display = 'flex'; txt.innerText = `${selectedQuestionIds.length} Selected`; } else { bar.style.display = 'none'; } }
 function clearSelection() { selectedQuestionIds = []; document.querySelectorAll('.bulk-delete-chk').forEach(c => c.checked = false); updateSelectionBar(); }
@@ -431,18 +311,16 @@ function cancelLongPress() { clearTimeout(lpTimer); }
 function closeQuestionActionBox(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m = document.getElementById('questionActionModal'); if(m) m.style.display = 'none'; }
 function editLongPressedQuestion() { closeQuestionActionBox(); editQuestion(editingQuestionId); }
 function deleteLongPressedQuestion() { closeQuestionActionBox(); deleteQuestion(editingQuestionId); }
-
 function openManualAddBox() { closeAddMcqChoiceModal(); editingQuestionId = null; document.getElementById('addQuestionBoxTitle').innerText = "✍️ New Question"; document.getElementById('addMoreBtnContainer').style.display = 'flex'; document.getElementById('updateQuestionBtn').style.display = 'none'; ['queTopic','queText','optA','optB','optC','optD','correctOpt','queTime'].forEach(id => document.getElementById(id).value = ''); document.getElementById('addQuestionBox').style.display = 'flex'; }
 function closeManualAddBox(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('addQuestionBox'); if(m) m.style.display = 'none'; }
 function openCsvUploadBox() { closeAddMcqChoiceModal(); document.getElementById('csvUploadBox').style.display = 'flex'; }
 function closeCsvUploadBox(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('csvUploadBox'); if(m) m.style.display = 'none'; }
-
 function editQuestion(qId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).get().then(doc => { let q = doc.data(); document.getElementById('queTopic').value = q.topic||'General'; document.getElementById('queText').value = q.question; document.getElementById('optA').value = q.optionA; document.getElementById('optB').value = q.optionB; document.getElementById('optC').value = q.optionC; document.getElementById('optD').value = q.optionD; document.getElementById('correctOpt').value = q.correct; document.getElementById('queTime').value = q.timeLimit||''; editingQuestionId = qId; document.getElementById('addQuestionBoxTitle').innerText = "✏️ Edit Question"; document.getElementById('addMoreBtnContainer').style.display = 'none'; document.getElementById('updateQuestionBtn').style.display = 'block'; document.getElementById('addQuestionBox').style.display = 'flex'; }); }
 function deleteQuestion(qId) { if(confirm("Delete question?")) db.collection('rooms').doc(currentRoomId).collection('questions').doc(qId).delete().then(() => { alert("Deleted!"); loadRoomQuestions(); }); }
 function saveQuestionToFirebase(isAddNext) { const qData = { topic: document.getElementById('queTopic').value.trim()||'General', question: document.getElementById('queText').value.trim(), optionA: document.getElementById('optA').value.trim(), optionB: document.getElementById('optB').value.trim(), optionC: document.getElementById('optC').value.trim(), optionD: document.getElementById('optD').value.trim(), correct: document.getElementById('correctOpt').value.trim().toUpperCase(), timeLimit: document.getElementById('queTime').value.trim()||null }; if(!qData.question || !qData.optionA || !qData.correct) return alert("Fill required fields!"); if (editingQuestionId) { db.collection('rooms').doc(currentRoomId).collection('questions').doc(editingQuestionId).update(qData).then(() => { alert("Updated!"); closeManualAddBox(); loadRoomQuestions(); }); } else { db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { qData.creatorName = userDoc.exists ? userDoc.data().displayName : "Unknown"; qData.creatorUid = auth.currentUser.uid; qData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); db.collection('rooms').doc(currentRoomId).collection('questions').add(qData).then(() => { if(isAddNext) { ['queText','optA','optB','optC','optD','correctOpt'].forEach(id => document.getElementById(id).value = ''); document.getElementById('queText').focus(); loadRoomQuestions(); } else { alert("Added!"); closeManualAddBox(); loadRoomQuestions(); } }); }); } }
 function uploadCSV() { const f = document.getElementById('csv-file').files[0]; if (!f) return alert("Select CSV!"); const ti = document.getElementById('csvTopic'), ct = ti && ti.value.trim() ? ti.value.trim() : 'General'; const r = new FileReader(); r.onload = function(e) { const rows = e.target.result.split('\n'); let c = 0; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { const n = doc.exists ? doc.data().displayName : "Unknown"; for (let i = 1; i < rows.length; i++) { const cols = rows[i].trim().split(','); if (cols.length >= 6) { db.collection('rooms').doc(currentRoomId).collection('questions').add({ topic: ct, question: cols[0].trim(), optionA: cols[1].trim(), optionB: cols[2].trim(), optionC: cols[3].trim(), optionD: cols[4].trim(), correct: cols[5].trim().toUpperCase(), creatorName: n, creatorUid: auth.currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); c++; } } alert(`Uploaded ${c} questions!`); document.getElementById('csv-file').value = ""; closeCsvUploadBox(); loadRoomQuestions(); }); }; r.readAsText(f); }
 
-// Room Connection
+// Room Connection Actions
 function openCreateRoom() { document.getElementById('createRoomBox').style.display = 'block'; document.getElementById('joinRoomBox').style.display = 'none'; }
 function closeCreateRoom() { document.getElementById('createRoomBox').style.display = 'none'; }
 function openJoinRoom() { document.getElementById('joinRoomBox').style.display = 'block'; document.getElementById('createRoomBox').style.display = 'none'; }
@@ -461,7 +339,6 @@ function copyInviteLink() { navigator.clipboard.writeText(document.getElementByI
 function shareViaWhatsApp() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join my Study Room! 📚\nClick here: ${document.getElementById('shareLinkInput').value}`)}`, '_blank'); }
 function viewUserProfile(uid) { db.collection('users').doc(uid).get().then(doc => { if(doc.exists) { document.getElementById('viewProfileName').innerText=doc.data().displayName||"Unknown"; document.getElementById('viewProfileUsername').innerText=doc.data().username||""; document.getElementById('viewProfileBio').innerText=doc.data().bio||""; document.getElementById('viewProfileModal').style.display='flex'; } }); }
 function closeViewProfile() { document.getElementById('viewProfileModal').style.display='none'; }
-function loadDiscoverRooms() { const c = document.getElementById('publicRoomsListContainer'); if(!c) return; c.innerHTML = 'Loading...'; db.collection('rooms').where('isPublic', '==', true).get().then(snap => { allPublicRooms = []; if(snap.empty) { c.innerHTML = '<p>No public rooms.</p>'; return; } let html = ''; snap.forEach(doc => { let r=doc.data(); r.id=doc.id; allPublicRooms.push(r); let im = r.members && auth.currentUser && r.members.includes(auth.currentUser.uid); let btn = im ? `<button class="btn" style="width:auto; padding:5px 10px; background:#6c757d; font-size:11px;" disabled>Joined</button>` : `<button class="btn" style="width:auto; padding:5px 10px; background:#28a745; font-size:11px;" onclick="joinSpecificRoom('${r.id}')">Join</button>`; html += `<div id="pub-room-${r.id}" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:10px; background:var(--card-bg);"><div><b style="color:var(--primary-btn); font-size:16px;">${r.roomName||'Room'}</b><br><span style="font-size:11px; color:var(--text-color);">By: ${r.creatorName||'Admin'} | 👥 ${r.members?r.members.length:1} Members</span></div>${btn}</div>`; }); c.innerHTML = html; }).catch(e => { c.innerHTML = `❌ Error`; }); }
 function filterPublicRooms() { const q = document.getElementById('searchPublicRoom').value.toLowerCase(); allPublicRooms.forEach(r => { let c = document.getElementById(`pub-room-${r.id}`); if(c) c.style.display = (r.roomName && r.roomName.toLowerCase().includes(q)) ? "flex" : "none"; }); }
 function openEditRoomBox() { closeRoomMenuModal(); document.getElementById('editRoomBox').style.display = 'flex'; document.getElementById('editRoomNameInput').value = currentRoomName; document.getElementById('editRoomAdminOnlyToggle').checked = currentRoomAdminOnlyMCQ; let p = document.getElementById('editRoomPublicToggle'); if(p) p.checked = currentRoomIsPublic; }
 function closeEditRoomBox() { document.getElementById('editRoomBox').style.display = 'none'; }
