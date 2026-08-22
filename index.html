@@ -41,7 +41,7 @@
     .topic-folder { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 10px; padding: 10px; }
     .topic-title { font-weight: bold; color: var(--text-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
     
-    /* 🌟 UPDATE 5.0: Mock Test Specific Styles */
+    /* Mock Test Specific Styles */
     .mock-active-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 3000; display: none; flex-direction: column; }
     .mock-header { background: #2c3e50; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
     .mock-body { flex: 1; overflow-y: auto; padding: 20px; }
@@ -49,7 +49,6 @@
     .mock-opt-btn { width: 100%; text-align: left; padding: 15px; margin-bottom: 10px; border-radius: 8px; border: 2px solid var(--border-color); background: var(--card-bg); font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .mock-opt-btn.selected { border-color: var(--primary-btn); background: #e9f5ff; color: #0056b3; }
     
-    /* 🌟 UPDATE 5.0: Report Card Styles */
     .report-stat-box { flex: 1; text-align: center; padding: 10px; background: var(--bg-color); border-radius: 8px; border: 1px solid var(--border-color); }
     .report-stat-box h4 { margin: 0; font-size: 20px; }
     .report-stat-box p { margin: 5px 0 0 0; font-size: 11px; color: var(--text-color); }
@@ -57,7 +56,7 @@
 </head>
 <body>
 
-  <!-- AUTH BOX (Same) -->
+  <!-- AUTH BOX -->
   <div class="auth-container" id="authBox">
     <div id="loginForm">
       <h2 style="color: var(--primary-btn); text-align: center;">StudyRoom Pro</h2>
@@ -78,7 +77,7 @@
     </div>
   </div>
 
-  <!-- BOTTOM NAV (Same) -->
+  <!-- BOTTOM NAV -->
   <nav id="bottomNavBar" class="bottom-nav" style="display: none;">
     <div class="nav-item active" id="navHome" onclick="backToDashboard()"><i class="fas fa-home"></i><span>Home</span></div>
     <div class="nav-item" id="navDiscover" onclick="openDiscoverRooms()"><i class="fas fa-compass"></i><span>Discover</span></div>
@@ -86,19 +85,20 @@
     <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()"><div class="round-profile-pic"><i class="fas fa-user"></i></div><span>Profile</span></div>
   </nav>
 
-  <!-- PROFILE MENU (Same) -->
+  <!-- PROFILE MENU (Added Test History Button) -->
   <div id="profileSettingsModal" class="profile-menu-overlay" onclick="closeProfileMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
       <h3 id="menuWelcomeText" style="margin: 0 0 15px 0; color: var(--primary-btn); text-align: center;">Hi, User!</h3>
       <button class="menu-btn" onclick="openProfileScreen()"><i class="fas fa-user-edit"></i> Edit Profile</button>
       <button class="menu-btn" onclick="openSolvedQuestionsScreen()"><i class="fas fa-check-circle" style="color: #28a745;"></i> My Solved Questions</button>
+      <button class="menu-btn" onclick="openMockHistoryScreen()"><i class="fas fa-chart-line" style="color: #6f42c1;"></i> Mock Test History</button>
       <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark / Light Mode</button>
       <button class="menu-btn" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
   </div>
 
-  <!-- DASHBOARD (Same) -->
+  <!-- DASHBOARD -->
   <div class="auth-container" id="dashboardScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: var(--primary-btn); font-size: 22px;">My Dashboard</h2>
     <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: center;">
@@ -116,7 +116,7 @@
       <div id="createRoomBox" style="display: none; padding: 15px; border: 1px dashed var(--primary-btn); border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
         <h4 style="color: var(--primary-btn); margin-top:0;">Create Room</h4>
         <input type="text" id="newRoomName" placeholder="Room Name" class="styled-input">
-        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text-color);"><input type="checkbox" id="isRoomPublicToggle"> 🌍 Public Room (Visible in Discover)</label>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; color:var(--text-color);"><input type="checkbox" id="isRoomPublicToggle"> 🌍 Public Room</label>
         <div style="display: flex; gap: 10px;"><button class="btn" style="padding: 8px; margin-top: 5px;" onclick="saveRoomToFirebase()">Save</button><button class="btn" style="padding: 8px; margin-top: 5px; background:#6c757d;" onclick="closeCreateRoom()">Cancel</button></div>
       </div>
       <div id="joinRoomBox" style="display: none; padding: 15px; border: 1px dashed #28a745; border-radius: 8px; margin-top: 15px; text-align: left; background: var(--bg-color);">
@@ -128,16 +128,41 @@
     <div style="margin-top: 20px;"><h3>My Rooms</h3><div id="roomsListContainer" style="margin-top:10px;">Loading rooms...</div></div>
   </div>
 
-  <!-- DISCOVER & REVISION & PROFILE (Same as before) -->
+  <!-- SCREENS -->
   <div class="auth-container" id="discoverScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: #17a2b8; font-size: 22px;">🌍 Discover Public Rooms</h2>
     <div class="input-group" style="margin-bottom: 10px;"><input type="text" id="searchPublicRoom" placeholder="🔍 Search rooms..." onkeyup="filterPublicRooms()" class="styled-input"></div>
     <div id="publicRoomsListContainer" style="font-size: 13px;">Loading...</div>
   </div>
+
   <div class="auth-container" id="revisionScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;"><h2 style="margin: 0; color: #dc3545; font-size: 22px;">📖 Revision List</h2></div>
     <div id="revisionListContainer">No wrong answers saved yet!</div>
   </div>
+
+  <!-- 🌟 NEW: MOCK TEST HISTORY SCREEN -->
+  <div class="auth-container" id="mockHistoryScreen" style="display: none; padding-bottom: 80px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
+      <h2 style="margin: 0; color: #6f42c1; font-size: 20px;">📈 Mock Test History</h2>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
+    </div>
+    <div id="mockHistoryListContainer">No history found!</div>
+  </div>
+
+  <!-- SOLVED ARCHIVE -->
+  <div class="auth-container" id="solvedQuestionsScreen" style="display: none; padding-bottom: 80px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h2 style="margin: 0; color: #28a745; font-size: 20px;">📚 Solved Archive</h2>
+      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
+    </div>
+    <p style="font-size: 11px; color: var(--text-color); margin-bottom: 15px;">Select to re-attempt.</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+        <span style="font-weight:bold; font-size: 13px;">Select for Re-attempt:</span>
+        <button class="btn" style="width:auto; padding:5px 12px; font-size:12px; margin:0; background:#6c757d;" onclick="toggleSelectAllSolved()">☑ Select All</button>
+    </div>
+    <div id="solvedQuestionsListContainer">No solved questions yet!</div>
+  </div>
+
   <div class="auth-container" id="profileScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; color: var(--primary-btn); font-size: 20px;">👤 Edit Profile</h2>
@@ -150,23 +175,7 @@
     <button class="btn" style="background-color: #28a745;" onclick="saveProfileData()">💾 Save Changes</button>
   </div>
 
-  <!-- 🌟 UPDATE 5.0: SOLVED QUESTIONS SCREEN (Added Select All logic) -->
-  <div class="auth-container" id="solvedQuestionsScreen" style="display: none; padding-bottom: 80px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-      <h2 style="margin: 0; color: #28a745; font-size: 20px;">📚 My Solved Archive</h2>
-      <button class="btn" style="width: auto; padding: 6px 12px; background-color: #6c757d;" onclick="backToDashboard()">⬅️ Back</button>
-    </div>
-    <p style="font-size: 11px; color: var(--text-color); margin-bottom: 15px;">Questions you answered correctly. Select to re-attempt.</p>
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-        <span style="font-weight:bold; font-size: 13px;">Select for Re-attempt:</span>
-        <button class="btn" style="width:auto; padding:5px 12px; font-size:12px; margin:0; background:#6c757d;" onclick="toggleSelectAllSolved()">☑ Select All</button>
-    </div>
-
-    <div id="solvedQuestionsListContainer">No solved questions yet!</div>
-  </div>
-
-  <!-- 🌟 UPDATE 5.0: SOLVED ACTION BAR -->
+  <!-- ACTION BARS -->
   <div id="solvedSelectionBar" class="selection-bar" style="bottom: 65px; background: #28a745;">
     <span id="solvedSelectedCountText" style="font-weight: bold; font-size: 14px;">1 Selected</span>
     <div style="display: flex; align-items: center;">
@@ -175,31 +184,6 @@
     </div>
   </div>
 
-  <!-- 🌟 ROOM VIEW SCREEN (UPDATED with Mock Test Button) -->
-  <div id="roomViewScreen" style="display: none; padding: 0;">
-    <div class="room-top-nav">
-      <div class="title"><i class="fas fa-arrow-left" onclick="backToDashboard()"></i> <span id="roomTitleText">Room Name</span></div>
-      <div class="actions"><i class="fas fa-share-alt" style="color: #28a745;" onclick="openShareModal()"></i><i class="fas fa-ellipsis-v" onclick="openRoomMenuModal()"></i></div>
-    </div>
-    <div class="room-content">
-      
-      <!-- Leaderboard & Mock Test Buttons -->
-      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <button class="btn" style="flex: 1; background: #ff9800; color: white;" onclick="openLeaderboard()">🏆 Leaderboard</button>
-        <button class="btn" style="flex: 1; background: #6f42c1; color: white;" onclick="openMockSetupModal()">📝 Take Mock Test</button>
-      </div>
-
-      <button id="addMcqMainBtn" class="btn" style="width: 100%; font-size: 15px; padding: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="openAddMcqChoiceModal()">➕ Add New MCQ</button>
-      
-      <div class="input-group"><input type="text" id="searchQuestion" placeholder="🔍 Search practice questions..." onkeyup="filterQuestions()" class="styled-input"></div>
-      
-      <h3 style="margin-bottom:10px;">Practice Mode</h3>
-      <p style="font-size:11px; color:#888; margin-top:-5px; margin-bottom:15px;">* Learn without negative marking.</p>
-      <div id="questionsListContainer">Loading questions...</div>
-    </div>
-  </div>
-
-  <!-- FLOATING SELECTION ACTION BAR (Practice Mode) -->
   <div id="selectionActionBar" class="selection-bar">
     <span id="selectedCountText" style="font-weight: bold; font-size: 14px;">1 Selected</span>
     <div style="display: flex; align-items: center;">
@@ -209,13 +193,36 @@
     </div>
   </div>
 
-  <!-- 🌟 UPDATE 5.0: MOCK TEST SETUP MODAL -->
+  <!-- ROOM VIEW SCREEN -->
+  <div id="roomViewScreen" style="display: none; padding: 0;">
+    <div class="room-top-nav">
+      <div class="title"><i class="fas fa-arrow-left" onclick="backToDashboard()"></i> <span id="roomTitleText">Room Name</span></div>
+      <div class="actions"><i class="fas fa-share-alt" style="color: #28a745;" onclick="openShareModal()"></i><i class="fas fa-ellipsis-v" onclick="openRoomMenuModal()"></i></div>
+    </div>
+    <div class="room-content">
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <button class="btn" style="flex: 1; background: #ff9800; color: white;" onclick="openLeaderboard()">🏆 Leaderboard</button>
+        <button class="btn" style="flex: 1; background: #6f42c1; color: white;" onclick="openMockSetupModal()">📝 Take Mock Test</button>
+      </div>
+      <button id="addMcqMainBtn" class="btn" style="width: 100%; font-size: 15px; padding: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="openAddMcqChoiceModal()">➕ Add New MCQ</button>
+      <div class="input-group"><input type="text" id="searchQuestion" placeholder="🔍 Search practice questions..." onkeyup="filterQuestions()" class="styled-input"></div>
+      
+      <h3 style="margin-bottom:10px;">Practice Mode</h3>
+      <p style="font-size:11px; color:#888; margin-top:-5px; margin-bottom:15px;">* Learn without negative marking.</p>
+      <div id="questionsListContainer">Loading questions...</div>
+    </div>
+  </div>
+
+  <!-- 🌟 UPDATE 5.1: MOCK TEST SETUP MODAL (With Topic Selector) -->
   <div id="mockSetupModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeMockSetupModal(event)">
-    <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
+    <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: #6f42c1; margin-top:0; text-align:center;">📝 Mock Test Setup</h3>
-      <p style="font-size: 12px; color: var(--text-color); margin-bottom: 15px; text-align:center;">
-        Rules: Correct (+1), Wrong (-0.25).
-      </p>
+      
+      <label style="font-weight:bold; font-size:14px; margin-top:10px; display:block;">Select Topics:</label>
+      <div id="mockTopicContainer" style="margin: 10px 0; border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto; background: var(--bg-color);">
+         <!-- Topics Injected via JS -->
+      </div>
+
       <label style="font-weight:bold; font-size:14px;">Number of Questions:</label>
       <select id="mockQCount" class="styled-input" style="margin-top:5px;">
         <option value="10">10 Questions</option>
@@ -234,57 +241,43 @@
     </div>
   </div>
 
-  <!-- 🌟 UPDATE 5.0: ACTIVE MOCK TEST FULL SCREEN -->
+  <!-- ACTIVE MOCK TEST FULL SCREEN -->
   <div id="activeMockTestScreen" class="mock-active-screen">
     <div class="mock-header">
       <span id="mockProgressText">Q: 1/20</span>
       <span id="mockTimerDisplay" style="display:none; color:#ff9800;">⏱️ 00:00</span>
       <button class="btn" style="width:auto; padding:5px 10px; background:#dc3545; margin:0;" onclick="submitMockTestEarly()">Submit & Exit</button>
     </div>
-    
     <div class="mock-body">
         <h3 id="mockQuestionText" style="margin-top:0;">Question loading...</h3>
-        <div id="mockOptionsContainer" style="margin-top:20px;">
-            <!-- Options injected by JS -->
-        </div>
+        <div id="mockOptionsContainer" style="margin-top:20px;"></div>
     </div>
-
     <div class="mock-footer">
         <button class="btn" style="width:45%; background:#6c757d;" onclick="prevMockQuestion()">⬅️ Previous</button>
         <button class="btn" id="mockNextBtn" style="width:45%; background:#28a745;" onclick="nextMockQuestion()">Next ➡️</button>
     </div>
   </div>
 
-  <!-- 🌟 UPDATE 5.0: MOCK TEST REPORT CARD -->
+  <!-- MOCK TEST REPORT CARD -->
   <div id="mockReportModal" class="profile-menu-overlay" style="align-items: center; z-index: 3500;" onclick="closeMockReport(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; text-align:center;" onclick="event.stopPropagation()">
       <h2 style="margin-top:0; color:#6f42c1;">📊 Report Card</h2>
-      
       <div style="background: #e9ecef; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
           <h1 id="reportFinalScore" style="margin:0; font-size:40px; color:#28a745;">0.00</h1>
           <p style="margin:0; font-weight:bold; color:#666;">Total Final Score</p>
       </div>
-
       <div style="display:flex; gap:10px; margin-bottom:15px;">
-          <div class="report-stat-box" style="border-color:#28a745;">
-              <h4 id="reportCorrect" style="color:#28a745;">0</h4><p>Correct</p>
-          </div>
-          <div class="report-stat-box" style="border-color:#dc3545;">
-              <h4 id="reportWrong" style="color:#dc3545;">0</h4><p>Wrong</p>
-          </div>
-          <div class="report-stat-box" style="border-color:#6c757d;">
-              <h4 id="reportUnattempted" style="color:#6c757d;">0</h4><p>Skipped</p>
-          </div>
+          <div class="report-stat-box" style="border-color:#28a745;"><h4 id="reportCorrect" style="color:#28a745;">0</h4><p>Correct</p></div>
+          <div class="report-stat-box" style="border-color:#dc3545;"><h4 id="reportWrong" style="color:#dc3545;">0</h4><p>Wrong</p></div>
+          <div class="report-stat-box" style="border-color:#6c757d;"><h4 id="reportUnattempted" style="color:#6c757d;">0</h4><p>Skipped</p></div>
       </div>
-      
       <h3 style="margin-bottom:5px;">🎯 Accuracy: <span id="reportAccuracy" style="color:#007bff;">0%</span></h3>
-      <p style="font-size:11px; color:#888;">Leaderboard updated with your score!</p>
-
-      <button class="btn" style="background:#6f42c1; margin-top:15px;" onclick="closeMockReport()">Return to Room</button>
+      <p style="font-size:11px; color:#888; margin-bottom:15px;">Saved to Test History & Leaderboard.</p>
+      <button class="btn" style="background:#6f42c1;" onclick="closeMockReport()">Return to Room</button>
     </div>
   </div>
 
-  <!-- OTHER MODALS (Assign Topic, Long Press, CSV etc kept identical...) -->
+  <!-- OTHER MODALS (Upload, Assign Topic, Add MCQ) -->
   <div id="assignTopicModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAssignTopicModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">🏷️ Move to Topic</h3>
@@ -293,7 +286,6 @@
       <button class="btn" style="background:#6c757d;" onclick="closeAssignTopicModal()">Cancel</button>
     </div>
   </div>
-
   <div id="questionActionModal" class="profile-menu-overlay" onclick="closeQuestionActionBox(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -302,7 +294,6 @@
       <button class="menu-btn" onclick="deleteLongPressedQuestion()"><i class="fas fa-trash"></i> Delete Question</button>
     </div>
   </div>
-
   <div id="roomMenuModal" class="profile-menu-overlay" onclick="closeRoomMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -314,7 +305,6 @@
       <button class="menu-btn" id="deleteRoomMenuBtn" onclick="deleteRoom()"><i class="fas fa-trash"></i> Delete Room</button>
     </div>
   </div>
-
   <div id="addMcqChoiceModal" class="profile-menu-overlay" onclick="closeAddMcqChoiceModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -323,7 +313,6 @@
       <button class="menu-btn" onclick="openCsvUploadBox()"><i class="fas fa-file-csv"></i> Upload CSV File</button>
     </div>
   </div>
-
   <div id="membersModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeMembersModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">👥 Room Members</h3>
@@ -331,7 +320,6 @@
       <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeMembersModal()">Close</button>
     </div>
   </div>
-
   <div id="editRoomBox" class="profile-menu-overlay" style="align-items: center;" onclick="closeEditRoomBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">⚙️ Room Settings</h3>
@@ -342,7 +330,6 @@
       <button class="btn" style="background:#666;" onclick="closeEditRoomBox()">Cancel</button>
     </div>
   </div>
-
   <div id="addQuestionBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeManualAddBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-top: 0;">✍️ New Question</h3>
@@ -362,7 +349,6 @@
       <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeManualAddBox()">Cancel</button>
     </div>
   </div>
-
   <div id="csvUploadBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeCsvUploadBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
       <h3 style="color:#28a745; margin-top: 0;">📁 Bulk Upload</h3>
@@ -376,16 +362,6 @@
       <button class="btn" style="background:#6c757d;" onclick="closeCsvUploadBox()">Cancel</button>
     </div>
   </div>
-
-  <div id="leaderboardModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeLeaderboard(event)">
-    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y:auto;" onclick="event.stopPropagation()">
-      <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Global Leaderboard (Marks)</h3>
-      <p style="font-size:11px; text-align:center; color:#888;">Updated via Mock Tests</p>
-      <div id="leaderboardList" style="margin-top: 15px; font-size: 14px;">Loading ranks...</div>
-      <button class="btn" style="padding: 6px; margin-top: 15px; background: #6c757d;" onclick="closeLeaderboard()">Close</button>
-    </div>
-  </div>
-
   <div id="shareModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeShareModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; text-align: center;" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-color);">Share Invite</h3>
@@ -397,7 +373,6 @@
       <button class="btn" style="padding: 6px; margin-top: 15px; background: #dc3545;" onclick="closeShareModal()">Close</button>
     </div>
   </div>
-
   <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center;">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
       <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
