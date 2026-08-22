@@ -273,7 +273,7 @@
     </div>
   </div>
 
-  <!-- 🌟 NEW: MOCK TEST REVIEW SCREEN -->
+  <!-- 🌟 MOCK TEST REVIEW SCREEN -->
   <div id="mockReviewScreen" class="mock-active-screen" style="z-index: 3600;">
     <div class="mock-header" style="background: #17a2b8;">
       <span>🔍 Test Review</span>
@@ -284,7 +284,7 @@
     </div>
   </div>
 
-  <!-- MOCK TEST REPORT CARD (Updated with Review Button) -->
+  <!-- MOCK TEST REPORT CARD -->
   <div id="mockReportModal" class="profile-menu-overlay" style="align-items: center; z-index: 3500;" onclick="closeMockReport(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; text-align:center;" onclick="event.stopPropagation()">
       <h2 style="margin-top:0; color:#6f42c1;">📊 Report Card</h2>
@@ -301,13 +301,13 @@
       <p style="font-size:11px; color:#888; margin-bottom:15px;">Saved to Test History & Leaderboard.</p>
       
       <!-- Review Answers Button -->
-      <button class="btn" style="background:#17a2b8; margin-bottom:10px;" onclick="openMockReview()">🔍 Review Answers</button>
+      <button class="btn" style="background:#17a2b8; margin-bottom:10px;" onclick="openMockReview('test')">🔍 Review Answers</button>
       
       <button class="btn" style="background:#6f42c1;" onclick="closeMockReport()">Return to Room</button>
     </div>
   </div>
 
-  <!-- OTHER MODALS (Assign, Options, CSV, Share, etc.) kept identical -->
+  <!-- OTHER MODALS (Assign, Options, CSV, Share, etc.) -->
   <div id="assignTopicModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAssignTopicModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">🏷️ Move to Topic</h3>
@@ -316,6 +316,7 @@
       <button class="btn" style="background:#6c757d;" onclick="closeAssignTopicModal()">Cancel</button>
     </div>
   </div>
+  
   <div id="questionActionModal" class="profile-menu-overlay" onclick="closeQuestionActionBox(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -346,6 +347,7 @@
       <button class="menu-btn" onclick="openCsvUploadBox()"><i class="fas fa-file-csv"></i> Upload CSV File</button>
     </div>
   </div>
+  
   <div id="membersModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeMembersModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">👥 Room Members</h3>
@@ -353,6 +355,7 @@
       <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeMembersModal()">Close</button>
     </div>
   </div>
+  
   <div id="editRoomBox" class="profile-menu-overlay" style="align-items: center;" onclick="closeEditRoomBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">⚙️ Room Settings</h3>
@@ -363,6 +366,7 @@
       <button class="btn" style="background:#666;" onclick="closeEditRoomBox()">Cancel</button>
     </div>
   </div>
+  
   <div id="addQuestionBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeManualAddBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-top: 0;">✍️ New Question</h3>
@@ -382,6 +386,7 @@
       <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeManualAddBox()">Cancel</button>
     </div>
   </div>
+  
   <div id="csvUploadBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeCsvUploadBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
       <h3 style="color:#28a745; margin-top: 0;">📁 Bulk Upload</h3>
@@ -395,6 +400,7 @@
       <button class="btn" style="background:#6c757d;" onclick="closeCsvUploadBox()">Cancel</button>
     </div>
   </div>
+  
   <div id="shareModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeShareModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; text-align: center;" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-color);">Share Invite</h3>
@@ -406,6 +412,7 @@
       <button class="btn" style="padding: 6px; margin-top: 15px; background: #dc3545;" onclick="closeShareModal()">Close</button>
     </div>
   </div>
+  
   <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center;">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
       <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
@@ -414,6 +421,7 @@
       <button class="btn" style="background: #6c757d; margin-top: 15px;" onclick="closeViewProfile()">Close</button>
     </div>
   </div>
+  
   <div id="leaderboardModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeLeaderboard(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y:auto;" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Global Leaderboard</h3>
