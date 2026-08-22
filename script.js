@@ -25,7 +25,7 @@ let selectedSolvedIds = [];
 updateRevisionCount(); checkDailyStreak(); 
 
 // ---------------------------------
-// 🔐 AUTHENTICATION LOGIC (FIXED)
+// 🔐 AUTHENTICATION LOGIC 
 // ---------------------------------
 function toggleAuth(type) { document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none'; document.getElementById('signupForm').style.display = type === 'signup' ? 'block' : 'none'; }
 function signupUser() { const n=document.getElementById('signupName').value.trim(), e=document.getElementById('signupEmail').value.trim(), p=document.getElementById('signupPassword').value.trim(); if(!n||!e||!p) return alert("Fill fields"); auth.createUserWithEmailAndPassword(e, p).then(c => db.collection('users').doc(c.user.uid).set({ displayName: n, email: e, username: "", mobile: "", bio: "" })).then(() => { alert("Created!"); toggleAuth('login'); }).catch(e => alert(e.message)); }
@@ -36,10 +36,7 @@ function logoutUser() { auth.signOut().then(() => { window.location.hash=''; win
 // -------------------------------
 // 🔥 DAILY STREAK
 // -------------------------------
-function checkDailyStreak() {
-  const t = new Date().toDateString(); let s = JSON.parse(localStorage.getItem('studyRoomStreak')) || { date: '', count: 0, streak: 0 };
-  if (s.date !== t) { let y = new Date(); y.setDate(y.getDate() - 1); if (s.date === y.toDateString() && s.count >= 10) {} else if (s.date !== y.toDateString()) { s.streak = 0; } s.date = t; s.count = 0; localStorage.setItem('studyRoomStreak', JSON.stringify(s)); } updateStreakUI();
-}
+function checkDailyStreak() { const t = new Date().toDateString(); let s = JSON.parse(localStorage.getItem('studyRoomStreak')) || { date: '', count: 0, streak: 0 }; if (s.date !== t) { let y = new Date(); y.setDate(y.getDate() - 1); if (s.date === y.toDateString() && s.count >= 10) {} else if (s.date !== y.toDateString()) { s.streak = 0; } s.date = t; s.count = 0; localStorage.setItem('studyRoomStreak', JSON.stringify(s)); } updateStreakUI(); }
 function updateStreakUI() { let s = JSON.parse(localStorage.getItem('studyRoomStreak')) || { count: 0, streak: 0 }; let e1=document.getElementById('streakCount'); if(e1) e1.innerText = s.streak + " Days"; let e2=document.getElementById('dailyQuestionsDone'); if(e2) e2.innerText = Math.min(s.count, 10); let e3=document.getElementById('dailyProgressBar'); if(e3) e3.style.width = Math.min((s.count/10)*100, 100) + "%"; }
 function recordQuestionAttempt() { const t = new Date().toDateString(); let s = JSON.parse(localStorage.getItem('studyRoomStreak')); if(s.date !== t) checkDailyStreak(); if(s.count < 10) { s.count++; if(s.count === 10) { s.streak++; setTimeout(() => alert("🎉 Daily Goal Completed!"), 500); } localStorage.setItem('studyRoomStreak', JSON.stringify(s)); updateStreakUI(); } }
 
@@ -47,7 +44,7 @@ function recordQuestionAttempt() { const t = new Date().toDateString(); let s = 
 // 📱 BOTTOM NAV & ROUTING
 // -------------------------------
 function updateBottomNav(activeId) { const nav = document.getElementById('bottomNavBar'); if(!auth.currentUser || (window.location.hash === '#room' && currentRoomId) || document.getElementById('activeMockTestScreen').style.display === 'flex') { if(nav) nav.style.display = 'none'; return; } if(nav) nav.style.display = 'flex'; ['navHome','navDiscover','navRevision','navProfile'].forEach(id => { let el = document.getElementById(id); if(el) el.classList.remove('active'); }); if(activeId) { let el = document.getElementById(activeId); if(el) el.classList.add('active'); } }
-function hideAllScreens() { ['authBox','dashboardScreen','discoverScreen','revisionScreen','profileScreen','roomViewScreen','solvedQuestionsScreen'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; }); closeProfileMenuModal(); closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); clearSolvedSelection(); }
+function hideAllScreens() { ['authBox','dashboardScreen','discoverScreen','revisionScreen','profileScreen','roomViewScreen','solvedQuestionsScreen','mockHistoryScreen'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; }); closeProfileMenuModal(); closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); clearSolvedSelection(); }
 
 window.addEventListener('hashchange', handleHashChange);
 function handleHashChange() {
@@ -58,6 +55,7 @@ function handleHashChange() {
   else if (hash === '#discover') { document.getElementById('discoverScreen').style.display = 'block'; loadDiscoverRooms(); updateBottomNav('navDiscover'); } 
   else if (hash === '#revision') { document.getElementById('revisionScreen').style.display = 'block'; renderRevisionBox(); updateBottomNav('navRevision'); } 
   else if (hash === '#solved') { document.getElementById('solvedQuestionsScreen').style.display = 'block'; renderSolvedQuestions(); updateBottomNav(); } 
+  else if (hash === '#mockhistory') { document.getElementById('mockHistoryScreen').style.display = 'block'; renderMockHistory(); updateBottomNav(); } 
   else if (hash === '#profile') { document.getElementById('profileScreen').style.display = 'block'; updateBottomNav('navProfile'); } 
   else if (hash === '#room' && currentRoomId) { document.getElementById('roomViewScreen').style.display = 'block'; updateBottomNav(); } else { window.location.hash = '#dashboard'; }
 }
@@ -80,23 +78,59 @@ function openLeaderboard() { let m = document.getElementById('leaderboardModal')
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 
 // ---------------------------------
-// 🌟 1. MOCK TEST ENGINE (UPDATE 5.0)
+// 🌟 1. MOCK TEST ENGINE (UPDATE 5.1 - Topic Filter & History)
 // ---------------------------------
 let mockTestQuestions = [];
 let mockCurrentIndex = 0;
-let mockUserAnswers = {}; // Tracks selected ORIGINAL option ID
+let mockUserAnswers = {}; 
 let mockTimer = null;
 let mockTimeLeft = 0;
+let currentMockTopics = []; // To save in history
 
-function openMockSetupModal() { document.getElementById('mockSetupModal').style.display = 'flex'; document.getElementById('mockTimerToggle').checked = false; }
+function openMockSetupModal() { 
+    document.getElementById('mockSetupModal').style.display = 'flex'; 
+    document.getElementById('mockTimerToggle').checked = false; 
+
+    // Generate Topic Checkboxes dynamically
+    const container = document.getElementById('mockTopicContainer');
+    let topics = [...new Set(allCurrentQuestions.map(q => q.topic))];
+    
+    if(topics.length === 0) {
+        container.innerHTML = '<p style="font-size:12px; color:red;">No topics available.</p>';
+        return;
+    }
+
+    let html = `<label style="font-size:13px; display:block; margin-bottom:8px; font-weight:bold; border-bottom:1px solid var(--border-color); padding-bottom:5px;">
+                  <input type="checkbox" id="selectAllTopics" checked onchange="toggleSelectAllTopics(this)" style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> Select All
+                </label>`;
+    topics.forEach(t => {
+        html += `<label style="display:block; margin:5px 0; font-size:13px;">
+                   <input type="checkbox" class="topic-chk" value="${t}" checked style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> ${t}
+                 </label>`;
+    });
+    container.innerHTML = html;
+}
+
 function closeMockSetupModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockSetupModal').style.display = 'none'; }
+
+function toggleSelectAllTopics(master) {
+    document.querySelectorAll('.topic-chk').forEach(c => c.checked = master.checked);
+}
 
 function startMockTest() {
     if(allCurrentQuestions.length === 0) return alert("No questions available in this room!");
+    
+    currentMockTopics = [];
+    document.querySelectorAll('.topic-chk:checked').forEach(c => currentMockTopics.push(c.value));
+    if(currentMockTopics.length === 0) return alert("Please select at least one topic!");
+
+    let filteredQ = allCurrentQuestions.filter(q => currentMockTopics.includes(q.topic));
+    if(filteredQ.length === 0) return alert("No questions found in selected topics!");
+
     const countVal = document.getElementById('mockQCount').value;
     const useTimer = document.getElementById('mockTimerToggle').checked;
     
-    let shuffledQ = [...allCurrentQuestions].sort(() => Math.random() - 0.5);
+    let shuffledQ = [...filteredQ].sort(() => Math.random() - 0.5);
     let qCount = countVal === 'all' ? shuffledQ.length : parseInt(countVal);
     if(qCount > shuffledQ.length) qCount = shuffledQ.length;
     
@@ -175,6 +209,24 @@ function submitMockTestEarly() {
     document.getElementById('reportUnattempted').innerText = unattempted;
     document.getElementById('reportAccuracy').innerText = accuracy + "%";
     
+    // Save to Mock History
+    let resultObj = {
+        date: new Date().toLocaleString(),
+        room: currentRoomName || "Unknown",
+        topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '),
+        totalQ: mockTestQuestions.length,
+        attempted: correct + wrong,
+        correct: correct,
+        wrong: wrong,
+        score: finalScore.toFixed(2),
+        accuracy: accuracy
+    };
+    
+    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || [];
+    history.push(resultObj);
+    localStorage.setItem('studyRoomMockHistory', JSON.stringify(history));
+    
+    // Firebase Leaderboard
     if(auth.currentUser && currentRoomId && finalScore > 0) {
         db.collection('users').doc(auth.currentUser.uid).get().then(doc => {
             db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid)
@@ -190,6 +242,39 @@ function closeMockReport(e) {
     document.getElementById('mockReportModal').style.display = 'none';
     window.location.hash = '#room'; 
     handleHashChange();
+}
+
+// ---------------------------------
+// 🌟 MOCK TEST HISTORY SCREEN
+// ---------------------------------
+function openMockHistoryScreen() { closeProfileMenuModal(); window.location.hash = '#mockhistory'; }
+
+function renderMockHistory() {
+    const c = document.getElementById('mockHistoryListContainer');
+    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || [];
+    if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; }
+    
+    let html = '';
+    history.reverse().forEach(h => {
+        html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);">
+                   <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                     <b style="color:#6f42c1; font-size:14px;">${h.room}</b>
+                     <span style="font-size:10px; color:#888;">${h.date}</span>
+                   </div>
+                   <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p>
+                   <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;">
+                     <span style="color:#28a745;">Score: ${h.score}</span>
+                     <span style="color:#007bff;">Acc: ${h.accuracy}%</span>
+                   </div>
+                   <div style="font-size:11px; display:flex; gap:10px; color:#555;">
+                     <span>Total: ${h.totalQ}</span>
+                     <span>✅ ${h.correct}</span>
+                     <span>❌ ${h.wrong}</span>
+                   </div>
+                 </div>`;
+    });
+    history.reverse(); // put it back
+    c.innerHTML = html;
 }
 
 // ---------------------------------
@@ -387,4 +472,3 @@ function loadRoomMembers() { const c = document.getElementById('membersListConta
 function makeAdmin(uid) { if(confirm("Make Admin?")) db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayUnion(uid) }).then(() => loadRoomMembers()); }
 function removeAdminRole(uid) { if(confirm("Remove Admin?")) db.collection('rooms').doc(currentRoomId).update({ admins: firebase.firestore.FieldValue.arrayRemove(uid) }).then(() => loadRoomMembers()); }
 function removeMember(uid) { if(confirm("Kick member?")) db.collection('rooms').doc(currentRoomId).update({ members: firebase.firestore.FieldValue.arrayRemove(uid), admins: firebase.firestore.FieldValue.arrayRemove(uid) }).then(() => loadRoomMembers()); }
-
