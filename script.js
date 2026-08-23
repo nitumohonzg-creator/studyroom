@@ -16,7 +16,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 let currentRoomId = null, currentRoomName = null, currentRoomCreator = null, currentRoomAdmins = [];
 let currentRoomAdminOnlyMCQ = false, currentRoomIsPublic = false, editingQuestionId = null;
 let editingMaterialId = null; 
-let reportingQId = null; let reportingQText = ""; // For Doubt System
+let reportingQId = null; let reportingQText = ""; 
 let openAuthorFolders = [], openTopicFolders = [], allCurrentQuestions = [];
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 let correctQuestions = JSON.parse(localStorage.getItem('studyRoomCorrect')) || []; 
@@ -34,19 +34,9 @@ function signupUser() { const n=document.getElementById('signupName').value.trim
 function loginUser() { auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value.trim()).then(() => handleHashChange()).catch(e => alert(e.message)); }
 function forgotPassword() { const e=document.getElementById('loginEmail').value.trim(); if(!e) return alert("Enter email!"); auth.sendPasswordResetEmail(e).then(() => alert("Sent!")).catch(e => alert(e.message)); }
 function logoutUser() { auth.signOut().then(() => { window.location.hash=''; window.location.reload(); }); }
-
 function openChangePasswordModal() { closeProfileMenuModal(); document.getElementById('changePasswordModal').style.display = 'flex'; document.getElementById('currentPasswordInput').value = ''; document.getElementById('newPasswordInput').value = ''; }
 function closeChangePasswordModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('changePasswordModal').style.display = 'none'; }
-function updateManualPassword() {
-    const currentPwd = document.getElementById('currentPasswordInput').value; const newPwd = document.getElementById('newPasswordInput').value;
-    if(!currentPwd || !newPwd) return alert("Please fill both password fields!");
-    if(newPwd.length < 6) return alert("New password must be at least 6 characters long.");
-    const btn = document.getElementById('updatePwdBtn'); btn.innerText = "Updating..."; btn.disabled = true;
-    const user = auth.currentUser; const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd);
-    user.reauthenticateWithCredential(credential).then(() => {
-        user.updatePassword(newPwd).then(() => { alert("✅ Password changed successfully!"); closeChangePasswordModal(); btn.innerText = "Update Password"; btn.disabled = false; }).catch((error) => { alert("❌ Error updating password: " + error.message); btn.innerText = "Update Password"; btn.disabled = false; });
-    }).catch((error) => { alert("❌ Your current password is incorrect!"); btn.innerText = "Update Password"; btn.disabled = false; });
-}
+function updateManualPassword() { const currentPwd = document.getElementById('currentPasswordInput').value; const newPwd = document.getElementById('newPasswordInput').value; if(!currentPwd || !newPwd) return alert("Please fill both password fields!"); if(newPwd.length < 6) return alert("New password must be at least 6 characters long."); const btn = document.getElementById('updatePwdBtn'); btn.innerText = "Updating..."; btn.disabled = true; const user = auth.currentUser; const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPwd); user.reauthenticateWithCredential(credential).then(() => { user.updatePassword(newPwd).then(() => { alert("✅ Password changed successfully!"); closeChangePasswordModal(); btn.innerText = "Update Password"; btn.disabled = false; }).catch((error) => { alert("❌ Error updating password: " + error.message); btn.innerText = "Update Password"; btn.disabled = false; }); }).catch((error) => { alert("❌ Your current password is incorrect!"); btn.innerText = "Update Password"; btn.disabled = false; }); }
 
 // -------------------------------
 // 🔥 DAILY STREAK
@@ -92,16 +82,14 @@ function backToRoom() { window.location.hash = '#room'; handleHashChange(); }
 function openDiscoverRooms() { window.location.hash = '#discover'; }
 function openProfileScreen() { closeProfileMenuModal(); db.collection('users').doc(auth.currentUser.uid).get().then(doc => { if(doc.exists) { let d=doc.data(); document.getElementById('profileName').value=d.displayName||""; document.getElementById('profileUsername').value=d.username||""; document.getElementById('profileMobile').value=d.mobile||""; document.getElementById('profileBio').value=d.bio||""; window.location.hash='#profile'; } }); }
 function saveProfileData() { const n=document.getElementById('profileName').value.trim(); if(!n) return alert("Name required!"); db.collection('users').doc(auth.currentUser.uid).update({ displayName: n, username: document.getElementById('profileUsername').value.trim(), mobile: document.getElementById('profileMobile').value.trim(), bio: document.getElementById('profileBio').value.trim() }).then(() => { alert("Updated!"); window.location.hash='#dashboard'; }); }
-
 function updateLeaderboardScore(points = 1) { if(!auth.currentUser || !currentRoomId) return; db.collection('users').doc(auth.currentUser.uid).get().then(doc => { db.collection('rooms').doc(currentRoomId).collection('leaderboard').doc(auth.currentUser.uid).set({ name: doc.data().displayName||"Unknown", score: firebase.firestore.FieldValue.increment(points) }, { merge: true }); }); }
 function openLeaderboard() { let m = document.getElementById('leaderboardModal'), c = document.getElementById('leaderboardList'); if(!m || !c) return; m.style.display = 'flex'; c.innerHTML = "Loading..."; db.collection('rooms').doc(currentRoomId).collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snap => { if(snap.empty) { c.innerHTML = "No scores yet. Take a Mock Test!"; return; } let html = '', rank = 1; snap.forEach(doc => { let d = doc.data(), medal = rank===1?'🥇':(rank===2?'🥈':(rank===3?'🥉':'🏅')); html += `<div style="display:flex; justify-content:space-between; padding:10px 5px; border-bottom:1px solid var(--border-color);"><span>${medal} <b>${d.name||'User'}</b></span><span style="color:#28a745; font-weight:bold;">${parseFloat(d.score||0).toFixed(2)} pts</span></div>`; rank++; }); c.innerHTML = html; }).catch(e => { c.innerHTML = `❌ Error`; }); }
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 
 // ---------------------------------
-// 🌟 STUDY MATERIAL LOGIC (PDF + Edit)
+// 🌟 STUDY MATERIAL LOGIC (PDF BUG FIXED)
 // ---------------------------------
 function openStudyMaterialScreen() { closeRoomMenuModal(); window.location.hash = '#material'; }
-
 function openAddMaterialModal() { editingMaterialId = null; document.getElementById('addMaterialModal').style.display = 'flex'; document.getElementById('matTopic').value = ''; document.getElementById('matTitle').value = ''; document.getElementById('matContent').value = ''; document.getElementById('saveMatBtn').innerText = "Save Note"; }
 function closeAddMaterialModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('addMaterialModal').style.display = 'none'; }
 function editMaterial(id) { db.collection('rooms').doc(currentRoomId).collection('materials').doc(id).get().then(doc => { if(doc.exists) { let m = doc.data(); document.getElementById('matTopic').value = m.topic || 'General'; document.getElementById('matTitle').value = m.title; document.getElementById('matContent').value = m.content; editingMaterialId = id; document.getElementById('saveMatBtn').innerText = "Update Note"; document.getElementById('addMaterialModal').style.display = 'flex'; } }).catch(err => alert("Error loading note: " + err.message)); }
@@ -116,14 +104,43 @@ function saveMaterialToFirebase(event) {
     }).catch(err => { alert("Auth Error: " + err.message); if(btn) { btn.innerText = originalText; btn.disabled = false; }}); 
 }
 
-// 🖨️ NEW: PDF SAVE LOGIC
-function printMaterial(title, content) {
-    let win = window.open('', '', 'height=700,width=700');
-    win.document.write('<html><head><title>' + title + '</title>');
-    win.document.write('<style>body{font-family: Arial, sans-serif; line-height:1.6; padding:30px; color:#333;} h2{color:#17a2b8; text-align:center; border-bottom:2px solid #17a2b8; padding-bottom:10px;} pre{white-space:pre-wrap; font-family: Arial, sans-serif; font-size:14px;}</style>');
-    win.document.write('</head><body><h2>' + title + '</h2><pre>' + content + '</pre></body></html>');
-    win.document.close();
-    setTimeout(() => { win.print(); }, 500); // small delay to load styles
+// 🖨️ THE ULTIMATE MOBILE NATIVE PDF PRINTER 
+function printMaterial(id) {
+    let m = allCurrentMaterials.find(x => x.id === id);
+    if (!m) return alert("Note not found!");
+
+    let printDiv = document.getElementById('print-section');
+    if (!printDiv) {
+        printDiv = document.createElement('div');
+        printDiv.id = 'print-section';
+        document.body.appendChild(printDiv);
+    }
+    
+    // Content layout for PDF
+    printDiv.innerHTML = `
+        <div style="padding: 20px; font-family: Arial, sans-serif; color: black; background: white;">
+            <h2 style="color:#333; text-align:center; border-bottom:2px solid #333; padding-bottom:10px;">${m.title}</h2>
+            <div style="white-space: pre-wrap; font-size:16px; line-height:1.6;">${m.content}</div>
+        </div>
+    `;
+
+    // Inject Native Print CSS dynamically
+    if (!document.getElementById('print-css')) {
+        let style = document.createElement('style');
+        style.id = 'print-css';
+        style.innerHTML = `
+            #print-section { display: none; }
+            @media print {
+                body > *:not(#print-section) { display: none !important; }
+                #print-section { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: white !important; margin: 0; padding: 0; }
+                body { background: white !important; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Trigger Print Dialog
+    setTimeout(() => { window.print(); }, 200);
 }
 
 let allCurrentMaterials = []; let openMatAuthorFolders = []; let openMatTopicFolders = [];
@@ -168,8 +185,8 @@ function renderMaterialsHTML(arr, im) {
         if(m.creatorUid === auth.currentUser.uid || im) {
             actionBtns = `<button class="btn" style="width:auto; padding:3px 8px; background:#ffc107; color:black; font-size:10px; margin:0; margin-right:5px;" onclick="editMaterial('${m.id}')"><i class="fas fa-edit"></i></button><button class="btn" style="width:auto; padding:3px 8px; background:#dc3545; font-size:10px; margin:0;" onclick="deleteMaterial('${m.id}')"><i class="fas fa-trash"></i></button>`;
         }
-        // PDF Print Button
-        let printBtn = `<button class="btn" style="width:auto; padding:5px 12px; background:#17a2b8; font-size:11px; margin-top:10px;" onclick="printMaterial('${m.title.replace(/'/g, "\\'")}', '${m.content.replace(/'/g, "\\'").replace(/\n/g, '\\n')}')"><i class="fas fa-print"></i> Save as PDF</button>`;
+        
+        let printBtn = `<button class="btn" style="width:auto; padding:5px 12px; background:#17a2b8; font-size:11px; margin-top:10px;" onclick="printMaterial('${m.id}')"><i class="fas fa-print"></i> Save as PDF</button>`;
 
         html += `<div id="mat-card-${m.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;"> 
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;"> 
@@ -219,7 +236,6 @@ function submitMockTestEarly() {
     mockTestQuestions.forEach(q => { let uAns = mockUserAnswers[q.id]; if(!uAns) { unattempted++; } else if(uAns === q.correct) { correct++; } else { wrong++; } });
     let finalScore = (correct * 1) - (wrong * 0.25); if(finalScore < 0) finalScore = 0; let accuracy = (correct + wrong) > 0 ? Math.round((correct / (correct + wrong)) * 100) : 0;
     document.getElementById('reportFinalScore').innerText = finalScore.toFixed(2); document.getElementById('reportCorrect').innerText = correct; document.getElementById('reportWrong').innerText = wrong; document.getElementById('reportUnattempted').innerText = unattempted; document.getElementById('reportAccuracy').innerText = accuracy + "%";
-    
     let resultObj = { date: new Date().toLocaleString(), room: currentRoomName || "Unknown", topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '), totalQ: mockTestQuestions.length, attempted: correct + wrong, correct: correct, wrong: wrong, score: finalScore.toFixed(2), accuracy: accuracy, questions: mockTestQuestions, userAnswers: mockUserAnswers };
     let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; history.push(resultObj); localStorage.setItem('studyRoomMockHistory', JSON.stringify(history));
     updateLeaderboardScore(finalScore); document.getElementById('mockReportModal').style.display = 'flex';
@@ -243,52 +259,16 @@ function renderMockHistory() { const c = document.getElementById('mockHistoryLis
 // ---------------------------------
 // 🌟 REPORT / DOUBT SYSTEM (PRO)
 // ---------------------------------
-function openReportModal(qId, text) {
-    reportingQId = qId; reportingQText = text;
-    document.getElementById('reportDoubtModal').style.display = 'flex';
-    document.getElementById('doubtInput').value = '';
-}
+function openReportModal(qId, text) { reportingQId = qId; reportingQText = text; document.getElementById('reportDoubtModal').style.display = 'flex'; document.getElementById('doubtInput').value = ''; }
 function closeReportModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('reportDoubtModal').style.display = 'none'; }
-function submitDoubt() {
-    const issue = document.getElementById('doubtInput').value.trim();
-    if(!issue) return alert("Please explain your doubt.");
-    const btn = document.getElementById('submitDoubtBtn'); btn.innerText = "Submitting..."; btn.disabled = true;
-    db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => {
-        db.collection('rooms').doc(currentRoomId).collection('reports').add({
-            qId: reportingQId, qText: reportingQText, issue: issue, 
-            senderUid: auth.currentUser.uid, senderName: userDoc.exists ? userDoc.data().displayName : "Student", 
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            alert("✅ Report sent to Admin!"); closeReportModal();
-            btn.innerText = "Submit Doubt"; btn.disabled = false;
-        });
-    }).catch(err => { alert("Error: "+err.message); btn.innerText = "Submit Doubt"; btn.disabled = false; });
-}
-
+function submitDoubt() { const issue = document.getElementById('doubtInput').value.trim(); if(!issue) return alert("Please explain your doubt."); const btn = document.getElementById('submitDoubtBtn'); btn.innerText = "Submitting..."; btn.disabled = true; db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { db.collection('rooms').doc(currentRoomId).collection('reports').add({ qId: reportingQId, qText: reportingQText, issue: issue, senderUid: auth.currentUser.uid, senderName: userDoc.exists ? userDoc.data().displayName : "Student", timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert("✅ Report sent to Admin!"); closeReportModal(); btn.innerText = "Submit Doubt"; btn.disabled = false; }); }).catch(err => { alert("Error: "+err.message); btn.innerText = "Submit Doubt"; btn.disabled = false; }); }
 function openAdminDoubtsModal() { closeRoomMenuModal(); document.getElementById('adminDoubtsModal').style.display = 'flex'; loadDoubtsForAdmin(); }
 function closeAdminDoubtsModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('adminDoubtsModal').style.display = 'none'; }
-function loadDoubtsForAdmin() {
-    const c = document.getElementById('doubtsListContainer'); c.innerHTML = 'Loading doubts...';
-    db.collection('rooms').doc(currentRoomId).collection('reports').orderBy('timestamp', 'desc').get().then(snap => {
-        if(snap.empty) { c.innerHTML = "<p>No doubts reported. All clear! 🎉</p>"; return; }
-        let html = '';
-        snap.forEach(doc => {
-            let r = doc.data();
-            html += `<div class="q-card" style="border-left: 4px solid #dc3545; margin-bottom:10px; background:var(--bg-color);">
-                        <p style="font-size:11px; margin-bottom:5px; color:#888;">Reported by: <b style="color:#ff9800;">${r.senderName}</b></p>
-                        <p style="font-weight:bold; font-size:13px; margin:0;">Q: ${r.qText}</p>
-                        <p style="font-size:13px; color:var(--text-color); margin-top:5px; padding:5px; background:var(--card-bg); border-radius:5px;"><b>Doubt:</b> ${r.issue}</p>
-                        <button class="btn" style="background:#28a745; font-size:11px; padding:5px 10px; width:auto; margin-top:5px;" onclick="deleteReport('${doc.id}')">✅ Mark Resolved (Delete)</button>
-                     </div>`;
-        });
-        c.innerHTML = html;
-    });
-}
+function loadDoubtsForAdmin() { const c = document.getElementById('doubtsListContainer'); c.innerHTML = 'Loading doubts...'; db.collection('rooms').doc(currentRoomId).collection('reports').orderBy('timestamp', 'desc').get().then(snap => { if(snap.empty) { c.innerHTML = "<p>No doubts reported. All clear! 🎉</p>"; return; } let html = ''; snap.forEach(doc => { let r = doc.data(); html += `<div class="q-card" style="border-left: 4px solid #dc3545; margin-bottom:10px; background:var(--bg-color);"> <p style="font-size:11px; margin-bottom:5px; color:#888;">Reported by: <b style="color:#ff9800;">${r.senderName}</b></p> <p style="font-weight:bold; font-size:13px; margin:0;">Q: ${r.qText}</p> <p style="font-size:13px; color:var(--text-color); margin-top:5px; padding:5px; background:var(--card-bg); border-radius:5px;"><b>Doubt:</b> ${r.issue}</p> <button class="btn" style="background:#28a745; font-size:11px; padding:5px 10px; width:auto; margin-top:5px;" onclick="deleteReport('${doc.id}')">✅ Mark Resolved (Delete)</button> </div>`; }); c.innerHTML = html; }); }
 function deleteReport(id) { if(confirm("Resolve and delete this report?")) { db.collection('rooms').doc(currentRoomId).collection('reports').doc(id).delete().then(() => loadDoubtsForAdmin()); } }
 
-
 // ---------------------------------
-// 🌟 PRACTICE FEED & SEARCH ENGINE FIX
+// 🌟 PRACTICE FEED & SEARCH FIX
 // ---------------------------------
 function filterQuestions() { 
     const q = document.getElementById('searchQuestion').value.toLowerCase(); 
@@ -297,16 +277,13 @@ function filterQuestions() {
         if(c) {
             if (x.question.toLowerCase().includes(q) || (x.topic && x.topic.toLowerCase().includes(q))) {
                 c.style.display = "block";
-                // Super Search: Automatically open hidden folders
                 if(q.length > 0) {
                     let authorId = `auth-${(x.creatorName||"Unknown").replace(/[^a-zA-Z0-9]/g, '_')}`;
                     let topicId = `topic-${(x.creatorName||"Unknown").replace(/[^a-zA-Z0-9]/g, '_')}-${(x.topic||"General").replace(/[^a-zA-Z0-9]/g, '_')}`;
                     let tEl = document.getElementById(topicId); let aEl = document.getElementById(authorId);
                     if(tEl) tEl.style.display = "block"; if(aEl) aEl.style.display = "block";
                 }
-            } else {
-                c.style.display = "none";
-            }
+            } else { c.style.display = "none"; }
         }
     }); 
 }
@@ -369,7 +346,7 @@ function checkAnswer(qId, sOpt, cOpt, qText) {
     wrongQuestions = wrongQuestions.filter(item => item.id !== qId);
     if(wrongQuestions.length !== prevLen) {
         localStorage.setItem('studyRoomWrong', JSON.stringify(wrongQuestions)); updateRevisionCount();
-        if(window.location.hash === '#revision') { setTimeout(() => renderRevisionBox(), 1000); } // Auto hide in revision screen
+        if(window.location.hash === '#revision') { setTimeout(() => renderRevisionBox(), 1000); } 
     }
 
     if (!correctQuestions.some(item => item.id === qId) && window.location.hash !== '#revision') { let ce = document.getElementById(`q-card-${qId}`); let cc = ce.cloneNode(true); let chk = cc.querySelector('.bulk-delete-chk'); if(chk) chk.remove(); correctQuestions.push({ id: qId, html: cc.innerHTML, room: currentRoomName }); localStorage.setItem('studyRoomCorrect', JSON.stringify(correctQuestions)); }
