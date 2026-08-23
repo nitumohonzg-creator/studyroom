@@ -56,7 +56,7 @@
 </head>
 <body>
 
-  <!-- ================= AUTH BOX ================= -->
+  <!-- AUTH BOX -->
   <div class="auth-container" id="authBox">
     <div id="loginForm">
       <h2 style="color: var(--primary-btn); text-align: center;">StudyRoom Pro</h2>
@@ -77,7 +77,7 @@
     </div>
   </div>
 
-  <!-- ================= BOTTOM NAV ================= -->
+  <!-- BOTTOM NAV -->
   <nav id="bottomNavBar" class="bottom-nav" style="display: none;">
     <div class="nav-item active" id="navHome" onclick="backToDashboard()"><i class="fas fa-home"></i><span>Home</span></div>
     <div class="nav-item" id="navDiscover" onclick="openDiscoverRooms()"><i class="fas fa-compass"></i><span>Discover</span></div>
@@ -85,7 +85,7 @@
     <div class="nav-item" id="navProfile" onclick="openProfileMenuModal()"><div class="round-profile-pic"><i class="fas fa-user"></i></div><span>Profile</span></div>
   </nav>
 
-  <!-- ================= PROFILE MENU ================= -->
+  <!-- PROFILE MENU -->
   <div id="profileSettingsModal" class="profile-menu-overlay" onclick="closeProfileMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -93,13 +93,26 @@
       <button class="menu-btn" onclick="openProfileScreen()"><i class="fas fa-user-edit"></i> Edit Profile</button>
       <button class="menu-btn" onclick="openSolvedQuestionsScreen()"><i class="fas fa-check-circle" style="color: #28a745;"></i> My Solved Questions</button>
       <button class="menu-btn" onclick="openMockHistoryScreen()"><i class="fas fa-chart-line" style="color: #6f42c1;"></i> Mock Test History</button>
-      <button class="menu-btn" onclick="changePassword()"><i class="fas fa-key" style="color: #ff9800;"></i> Change Password</button>
+      <button class="menu-btn" onclick="openChangePasswordModal()"><i class="fas fa-key" style="color: #ff9800;"></i> Change Password</button>
       <button class="menu-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Dark / Light Mode</button>
       <button class="menu-btn" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
   </div>
 
-  <!-- ================= DASHBOARD SCREEN ================= -->
+  <!-- MANUAL CHANGE PASSWORD MODAL -->
+  <div id="changePasswordModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeChangePasswordModal(event)">
+    <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
+      <h3 style="color: #ff9800; margin-top:0;">🔑 Change Password</h3>
+      <label style="font-size:12px; font-weight:bold;">Current Password</label>
+      <input type="password" id="currentPasswordInput" placeholder="Enter current password" class="styled-input" style="margin-top:5px;">
+      <label style="font-size:12px; font-weight:bold;">New Password</label>
+      <input type="password" id="newPasswordInput" placeholder="Enter new password (min 6 chars)" class="styled-input" style="margin-top:5px;">
+      <button class="btn" id="updatePwdBtn" style="background:#ff9800; margin-top:15px;" onclick="updateManualPassword()">Update Password</button>
+      <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeChangePasswordModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
   <div class="auth-container" id="dashboardScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: var(--primary-btn); font-size: 22px;">My Dashboard</h2>
     <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: center;">
@@ -129,20 +142,21 @@
     <div style="margin-top: 20px;"><h3>My Rooms</h3><div id="roomsListContainer" style="margin-top:10px;">Loading rooms...</div></div>
   </div>
 
-  <!-- ================= DISCOVER SCREEN ================= -->
+  <!-- DISCOVER SCREEN -->
   <div class="auth-container" id="discoverScreen" style="display: none;">
     <h2 style="margin: 0 0 15px 0; color: #17a2b8; font-size: 22px;">🌍 Discover Public Rooms</h2>
     <div class="input-group" style="margin-bottom: 10px;"><input type="text" id="searchPublicRoom" placeholder="🔍 Search rooms..." onkeyup="filterPublicRooms()" class="styled-input"></div>
     <div id="publicRoomsListContainer" style="font-size: 13px;">Loading...</div>
   </div>
 
-  <!-- ================= REVISION SCREEN ================= -->
+  <!-- REVISION SCREEN -->
   <div class="auth-container" id="revisionScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;"><h2 style="margin: 0; color: #dc3545; font-size: 22px;">📖 Revision List</h2></div>
+    <p style="font-size: 11px; color: var(--text-color); margin-top:-15px; margin-bottom: 15px;">Answer correctly to remove from this list.</p>
     <div id="revisionListContainer">No wrong answers saved yet!</div>
   </div>
 
-  <!-- ================= MOCK HISTORY SCREEN ================= -->
+  <!-- MOCK HISTORY SCREEN -->
   <div class="auth-container" id="mockHistoryScreen" style="display: none; padding-bottom: 80px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
       <h2 style="margin: 0; color: #6f42c1; font-size: 20px;">📈 Mock Test History</h2>
@@ -151,7 +165,7 @@
     <div id="mockHistoryListContainer">No history found!</div>
   </div>
 
-  <!-- ================= SOLVED QUESTIONS SCREEN ================= -->
+  <!-- SOLVED QUESTIONS SCREEN -->
   <div class="auth-container" id="solvedQuestionsScreen" style="display: none; padding-bottom: 80px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <h2 style="margin: 0; color: #28a745; font-size: 20px;">📚 Solved Archive</h2>
@@ -165,7 +179,7 @@
     <div id="solvedQuestionsListContainer">No solved questions yet!</div>
   </div>
 
-  <!-- ================= PROFILE EDIT SCREEN ================= -->
+  <!-- PROFILE EDIT SCREEN -->
   <div class="auth-container" id="profileScreen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; color: var(--primary-btn); font-size: 20px;">👤 Edit Profile</h2>
@@ -178,7 +192,7 @@
     <button class="btn" style="background-color: #28a745;" onclick="saveProfileData()">💾 Save Changes</button>
   </div>
 
-  <!-- ================= ACTION BARS ================= -->
+  <!-- ACTION BARS -->
   <div id="solvedSelectionBar" class="selection-bar" style="bottom: 65px; background: #28a745;">
     <span id="solvedSelectedCountText" style="font-weight: bold; font-size: 14px;">1 Selected</span>
     <div style="display: flex; align-items: center;">
@@ -196,7 +210,7 @@
     </div>
   </div>
 
-  <!-- ================= ROOM VIEW SCREEN ================= -->
+  <!-- ROOM VIEW SCREEN -->
   <div id="roomViewScreen" style="display: none; padding: 0;">
     <div class="room-top-nav">
       <div class="title"><i class="fas fa-arrow-left" onclick="backToDashboard()"></i> <span id="roomTitleText">Room Name</span></div>
@@ -208,7 +222,7 @@
         <button class="btn" style="flex: 1; background: #6f42c1; color: white;" onclick="openMockSetupModal()">📝 Take Mock Test</button>
       </div>
       <button id="addMcqMainBtn" class="btn" style="width: 100%; font-size: 15px; padding: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="openAddMcqChoiceModal()">➕ Add New MCQ</button>
-      <div class="input-group"><input type="text" id="searchQuestion" placeholder="🔍 Search practice questions..." onkeyup="filterQuestions()" class="styled-input"></div>
+      <div class="input-group"><input type="text" id="searchQuestion" placeholder="🔍 Search questions..." onkeyup="filterQuestions()" class="styled-input"></div>
       
       <h3 style="margin-bottom:10px;">Practice Mode</h3>
       <p style="font-size:11px; color:#888; margin-top:-5px; margin-bottom:15px;">* Learn without negative marking.</p>
@@ -216,7 +230,7 @@
     </div>
   </div>
 
-  <!-- ================= STUDY MATERIAL SCREEN ================= -->
+  <!-- STUDY MATERIAL SCREEN -->
   <div id="studyMaterialScreen" style="display: none; padding: 0;">
     <div class="room-top-nav">
       <div class="title"><i class="fas fa-arrow-left" onclick="backToRoom()"></i> <span>📚 Study Materials</span></div>
@@ -228,9 +242,9 @@
     </div>
   </div>
 
-  <!-- ================= ALL MODALS & OVERLAYS ================= -->
+  <!-- ALL MODALS -->
 
-  <!-- Add Study Material Modal (ONLY ONE INSTANCE NOW) -->
+  <!-- Add Study Material Modal -->
   <div id="addMaterialModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAddMaterialModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: #17a2b8; margin-top: 0;">✍️ Upload Study Material</h3>
@@ -308,6 +322,26 @@
     </div>
   </div>
 
+  <!-- 🌟 NEW: REPORT/DOUBT MODAL (For Users) -->
+  <div id="reportDoubtModal" class="profile-menu-overlay" style="align-items: center; z-index: 2600;" onclick="closeReportModal(event)">
+    <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
+      <h3 style="color: #ff9800; margin-top:0;">⚠️ Report Issue / Doubt</h3>
+      <p style="font-size:12px; color:var(--text-color); margin-bottom:10px;">Admin will review your doubt regarding this question.</p>
+      <textarea id="doubtInput" placeholder="Explain your doubt or why the answer is wrong..." class="styled-input" style="height:100px; resize:vertical;"></textarea>
+      <button class="btn" id="submitDoubtBtn" style="background:#ff9800; margin-top:10px;" onclick="submitDoubt()">Submit Doubt</button>
+      <button class="btn" style="background:#6c757d; margin-top:10px;" onclick="closeReportModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- 🌟 NEW: ADMIN VIEW DOUBTS MODAL -->
+  <div id="adminDoubtsModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAdminDoubtsModal(event)">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
+      <h3 style="color: #dc3545; margin-top:0;">📬 Student Doubts / Reports</h3>
+      <div id="doubtsListContainer" style="margin-top:15px;">Loading...</div>
+      <button class="btn" style="background:#6c757d; margin-top:15px;" onclick="closeAdminDoubtsModal()">Close</button>
+    </div>
+  </div>
+
   <!-- Assign Topic Modal -->
   <div id="assignTopicModal" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeAssignTopicModal(event)">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px;" onclick="event.stopPropagation()">
@@ -318,7 +352,6 @@
     </div>
   </div>
   
-  <!-- Question Action Modal -->
   <div id="questionActionModal" class="profile-menu-overlay" onclick="closeQuestionActionBox(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -328,12 +361,13 @@
     </div>
   </div>
   
-  <!-- Room Menu Modal -->
+  <!-- Room Menu Modal (Added View Doubts) -->
   <div id="roomMenuModal" class="profile-menu-overlay" onclick="closeRoomMenuModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
       <h3 style="margin: 0 0 15px 0; color: var(--text-color); text-align: center;">Room Options</h3>
       <button class="menu-btn" onclick="openStudyMaterialScreen()"><i class="fas fa-book" style="color: #17a2b8;"></i> Study Material</button>
+      <button class="menu-btn" id="viewDoubtsAdminBtn" style="display:none;" onclick="openAdminDoubtsModal()"><i class="fas fa-envelope-open-text" style="color:#ff9800;"></i> View Doubts</button>
       <button class="menu-btn" onclick="openMembersModal()"><i class="fas fa-users"></i> View Members</button>
       <button class="menu-btn" onclick="copyRoomId()"><i class="fas fa-copy"></i> Copy Room ID</button>
       <button class="menu-btn" id="editRoomMenuBtn" onclick="openEditRoomBox()"><i class="fas fa-cog"></i> Room Settings</button>
@@ -342,7 +376,6 @@
     </div>
   </div>
   
-  <!-- Add MCQ Choice Modal -->
   <div id="addMcqChoiceModal" class="profile-menu-overlay" onclick="closeAddMcqChoiceModal(event)">
     <div class="profile-menu-sheet" onclick="event.stopPropagation()">
       <div style="text-align: center; margin-bottom: 15px;"><div style="width: 50px; height: 5px; background: var(--border-color); border-radius: 5px; margin: 0 auto;"></div></div>
@@ -352,7 +385,6 @@
     </div>
   </div>
   
-  <!-- Members Modal -->
   <div id="membersModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeMembersModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">👥 Room Members</h3>
@@ -361,7 +393,6 @@
     </div>
   </div>
   
-  <!-- Edit Room Box -->
   <div id="editRoomBox" class="profile-menu-overlay" style="align-items: center;" onclick="closeEditRoomBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
       <h3 style="color: var(--primary-btn); margin-top:0;">⚙️ Room Settings</h3>
@@ -373,7 +404,6 @@
     </div>
   </div>
   
-  <!-- Add Question Box -->
   <div id="addQuestionBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeManualAddBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 95%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
       <h3 id="addQuestionBoxTitle" style="color: var(--primary-btn); margin-top: 0;">✍️ New Question</h3>
@@ -394,7 +424,6 @@
     </div>
   </div>
   
-  <!-- CSV Upload Box -->
   <div id="csvUploadBox" class="profile-menu-overlay" style="align-items: center; z-index: 2500;" onclick="closeCsvUploadBox(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%;" onclick="event.stopPropagation()">
       <h3 style="color:#28a745; margin-top: 0;">📁 Bulk Upload</h3>
@@ -409,7 +438,6 @@
     </div>
   </div>
   
-  <!-- Share Modal -->
   <div id="shareModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeShareModal(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; text-align: center;" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; margin-bottom: 15px; color: var(--text-color);">Share Invite</h3>
@@ -422,7 +450,6 @@
     </div>
   </div>
   
-  <!-- View Profile Modal -->
   <div id="viewProfileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center;">
     <div style="background: var(--card-bg); padding: 25px; border-radius: 10px; width: 85%; max-width: 400px;">
       <h3 id="viewProfileName" style="color: var(--primary-btn); margin-top: 0;">Name</h3>
@@ -432,7 +459,6 @@
     </div>
   </div>
   
-  <!-- Leaderboard Modal -->
   <div id="leaderboardModal" class="profile-menu-overlay" style="align-items: center;" onclick="closeLeaderboard(event)">
     <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; width: 90%; max-height: 80vh; overflow-y:auto;" onclick="event.stopPropagation()">
       <h3 style="margin-top: 0; color: #ff9800; text-align: center;">🏆 Global Leaderboard</h3>
