@@ -15,6 +15,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 // GLOBALS
 let currentRoomId = null, currentRoomName = null, currentRoomCreator = null, currentRoomAdmins = [];
 let currentRoomAdminOnlyMCQ = false, currentRoomIsPublic = false, editingQuestionId = null;
+let editingMaterialId = null; // 🌟 NEW: Track material being edited
 let openAuthorFolders = [], openTopicFolders = [], allCurrentQuestions = [];
 let wrongQuestions = JSON.parse(localStorage.getItem('studyRoomWrong')) || [];
 let correctQuestions = JSON.parse(localStorage.getItem('studyRoomCorrect')) || []; 
@@ -85,11 +86,34 @@ function openLeaderboard() { let m = document.getElementById('leaderboardModal')
 function closeLeaderboard(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; let m=document.getElementById('leaderboardModal'); if(m) m.style.display='none'; }
 
 // ---------------------------------
-// 🌟 STUDY MATERIAL LOGIC
+// 🌟 STUDY MATERIAL LOGIC (With Edit & Delete)
 // ---------------------------------
 function openStudyMaterialScreen() { closeRoomMenuModal(); window.location.hash = '#material'; }
-function openAddMaterialModal() { document.getElementById('addMaterialModal').style.display = 'flex'; document.getElementById('matTopic').value = ''; document.getElementById('matTitle').value = ''; document.getElementById('matContent').value = ''; }
+
+function openAddMaterialModal() { 
+    editingMaterialId = null; // Reset for new entry
+    document.getElementById('addMaterialModal').style.display = 'flex'; 
+    document.getElementById('matTopic').value = ''; 
+    document.getElementById('matTitle').value = ''; 
+    document.getElementById('matContent').value = ''; 
+    document.getElementById('saveMatBtn').innerText = "Save Note";
+}
+
 function closeAddMaterialModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('addMaterialModal').style.display = 'none'; }
+
+function editMaterial(id) {
+    db.collection('rooms').doc(currentRoomId).collection('materials').doc(id).get().then(doc => {
+        if(doc.exists) {
+            let m = doc.data();
+            document.getElementById('matTopic').value = m.topic || 'General';
+            document.getElementById('matTitle').value = m.title;
+            document.getElementById('matContent').value = m.content;
+            editingMaterialId = id;
+            document.getElementById('saveMatBtn').innerText = "Update Note";
+            document.getElementById('addMaterialModal').style.display = 'flex';
+        }
+    }).catch(err => alert("Error loading note: " + err.message));
+}
 
 function saveMaterialToFirebase(event) { 
     const topic = document.getElementById('matTopic').value.trim() || 'General'; 
@@ -99,49 +123,100 @@ function saveMaterialToFirebase(event) {
     if(!title || !content) return alert("Title and Content are required!"); 
 
     const btn = event ? event.target : document.getElementById('saveMatBtn');
-    let originalText = "Save Note";
-    if(btn) { originalText = btn.innerText; btn.innerText = "Saving..."; btn.disabled = true; }
+    let originalText = btn ? btn.innerText : "Save Note";
+    if(btn) { btn.innerText = "Saving..."; btn.disabled = true; }
 
     db.collection('users').doc(auth.currentUser.uid).get().then(userDoc => { 
         const data = { 
-            topic: topic, title: title, content: content, 
+            topic: topic, 
+            title: title, 
+            content: content, 
             creatorUid: auth.currentUser.uid, 
             creatorName: userDoc.exists ? userDoc.data().displayName : "Unknown", 
-            createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
         }; 
-        db.collection('rooms').doc(currentRoomId).collection('materials').add(data).then(() => { 
-            alert("Note Added Successfully!"); 
-            if(btn) { btn.innerText = originalText; btn.disabled = false; }
-            closeAddMaterialModal(); loadMaterials(); 
-        }).catch(err => {
-            alert("Error saving Note: " + err.message);
-            if(btn) { btn.innerText = originalText; btn.disabled = false; }
-        });
-    }).catch(err => {
-        alert("Authentication Error: " + err.message);
-        if(btn) { btn.innerText = originalText; btn.disabled = false; }
-    }); 
+
+        if (editingMaterialId) {
+            // Update Existing Note
+            db.collection('rooms').doc(currentRoomId).collection('materials').doc(editingMaterialId).update(data).then(() => { 
+                alert("Note Updated Successfully!"); 
+                if(btn) { btn.innerText = originalText; btn.disabled = false; }
+                closeAddMaterialModal(); loadMaterials(); 
+            }).catch(err => { alert("Error: " + err.message); if(btn) { btn.innerText = originalText; btn.disabled = false; }});
+        } else {
+            // Add New Note
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            db.collection('rooms').doc(currentRoomId).collection('materials').add(data).then(() => { 
+                alert("Note Added Successfully!"); 
+                if(btn) { btn.innerText = originalText; btn.disabled = false; }
+                closeAddMaterialModal(); loadMaterials(); 
+            }).catch(err => { alert("Error: " + err.message); if(btn) { btn.innerText = originalText; btn.disabled = false; }});
+        }
+    }).catch(err => { alert("Auth Error: " + err.message); if(btn) { btn.innerText = originalText; btn.disabled = false; }}); 
 }
 
 let allCurrentMaterials = []; let openMatAuthorFolders = []; let openMatTopicFolders = [];
 function toggleMatAuthor(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openMatAuthorFolders.includes(id)) openMatAuthorFolders.push(id); } else { el.style.display = 'none'; openMatAuthorFolders = openMatAuthorFolders.filter(x => x !== id); } }
 function toggleMatTopic(id) { let el = document.getElementById(id); if(el.style.display === 'none') { el.style.display = 'block'; if(!openMatTopicFolders.includes(id)) openMatTopicFolders.push(id); } else { el.style.display = 'none'; openMatTopicFolders = openMatTopicFolders.filter(x => x !== id); } }
 function filterMaterials() { const q = document.getElementById('searchMaterial').value.toLowerCase(); allCurrentMaterials.forEach(m => { const c = document.getElementById(`mat-card-${m.id}`); if(c) c.style.display = (m.title.toLowerCase().includes(q) || m.topic.toLowerCase().includes(q)) ? "block" : "none"; }); }
-function loadMaterials() { const c = document.getElementById('materialsListContainer'); c.innerHTML = 'Loading study materials...'; const im = currentRoomAdmins.includes(auth.currentUser.uid); let addBtn = document.getElementById('addMaterialMainBtn'); if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block'; db.collection('rooms').doc(currentRoomId).collection('materials').orderBy('createdAt', 'desc').get().then(snap => { if (snap.empty) { c.innerHTML = 'No study materials found in this room.'; allCurrentMaterials = []; return; } let aMap = {}; allCurrentMaterials = []; snap.forEach(doc => { let m = doc.data(); m.id = doc.id; m.topic = m.topic || 'General'; allCurrentMaterials.push(m); let author = m.creatorName || "Unknown"; if(!aMap[author]) aMap[author] = {}; if(!aMap[author][m.topic]) aMap[author][m.topic] = []; aMap[author][m.topic].push(m); }); let html = ''; for(let author in aMap) { let authId = `mat-auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; let authOpen = openMatAuthorFolders.includes(authId) ? 'block' : 'none'; let totalAuthM = 0; let topicHtml = ''; for(let topic in aMap[author]) { totalAuthM += aMap[author][topic].length; let topicId = `mat-topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`; let topicOpen = openMatTopicFolders.includes(topicId) ? 'block' : 'none'; topicHtml += `<div class="topic-folder"><div class="topic-title" onclick="toggleMatTopic('${topicId}')"><span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span></div><div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">${renderMaterialsHTML(aMap[author][topic], im)}</div></div>`; } html += `<div class="q-card" style="border: 2px solid #17a2b8;"><h4 style="color:#17a2b8; cursor:pointer; font-size:16px; margin:0;" onclick="toggleMatAuthor('${authId}')">👤 Notes by ${author} (${totalAuthM}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`; } c.innerHTML = html; }).catch(err => { c.innerHTML = `<p style="color:red;">Error loading materials.</p>`; }); }
-function renderMaterialsHTML(arr, im) { let html = ''; arr.forEach(m => { let delBtn = (m.creatorUid === auth.currentUser.uid || im) ? `<button class="btn" style="width:auto; padding:3px 8px; background:#dc3545; font-size:10px; margin:0;" onclick="deleteMaterial('${m.id}')"><i class="fas fa-trash"></i></button>` : ''; html += `<div id="mat-card-${m.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"> <h4 style="margin:0; color:var(--primary-btn);">${m.title}</h4> ${delBtn} </div> <p style="white-space: pre-wrap; font-size:13px; color:var(--text-color); margin:0;">${m.content}</p> </div>`; }); return html; }
+
+function loadMaterials() { 
+    const c = document.getElementById('materialsListContainer'); c.innerHTML = 'Loading study materials...'; 
+    const im = currentRoomAdmins.includes(auth.currentUser.uid); 
+    let addBtn = document.getElementById('addMaterialMainBtn'); 
+    if(addBtn) addBtn.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block'; 
+    
+    db.collection('rooms').doc(currentRoomId).collection('materials').orderBy('createdAt', 'desc').get().then(snap => { 
+        if (snap.empty) { c.innerHTML = 'No study materials found in this room.'; allCurrentMaterials = []; return; } 
+        let aMap = {}; allCurrentMaterials = []; 
+        snap.forEach(doc => { 
+            let m = doc.data(); m.id = doc.id; m.topic = m.topic || 'General'; allCurrentMaterials.push(m); 
+            let author = m.creatorName || "Unknown"; 
+            if(!aMap[author]) aMap[author] = {}; if(!aMap[author][m.topic]) aMap[author][m.topic] = []; 
+            aMap[author][m.topic].push(m); 
+        }); 
+        
+        let html = ''; 
+        for(let author in aMap) { 
+            let authId = `mat-auth-${author.replace(/[^a-zA-Z0-9]/g, '_')}`; let authOpen = openMatAuthorFolders.includes(authId) ? 'block' : 'none'; let totalAuthM = 0; let topicHtml = ''; 
+            for(let topic in aMap[author]) { 
+                totalAuthM += aMap[author][topic].length; 
+                let topicId = `mat-topic-${author.replace(/[^a-zA-Z0-9]/g, '_')}-${topic.replace(/[^a-zA-Z0-9]/g, '_')}`; let topicOpen = openMatTopicFolders.includes(topicId) ? 'block' : 'none'; 
+                topicHtml += `<div class="topic-folder"><div class="topic-title" onclick="toggleMatTopic('${topicId}')"><span>📂 ${topic} (${aMap[author][topic].length}) 🔽</span></div><div id="${topicId}" style="display: ${topicOpen}; margin-top:10px;">${renderMaterialsHTML(aMap[author][topic], im)}</div></div>`; 
+            } 
+            html += `<div class="q-card" style="border: 2px solid #17a2b8;"><h4 style="color:#17a2b8; cursor:pointer; font-size:16px; margin:0;" onclick="toggleMatAuthor('${authId}')">👤 Notes by ${author} (${totalAuthM}) 🔽</h4><div id="${authId}" style="display: ${authOpen}; margin-top:10px;">${topicHtml}</div></div>`; 
+        } 
+        c.innerHTML = html; 
+    }).catch(err => { c.innerHTML = `<p style="color:red;">Error loading materials.</p>`; }); 
+}
+
+function renderMaterialsHTML(arr, im) { 
+    let html = ''; 
+    arr.forEach(m => { 
+        let actionBtns = '';
+        if(m.creatorUid === auth.currentUser.uid || im) {
+            actionBtns = `
+                <button class="btn" style="width:auto; padding:3px 8px; background:#ffc107; color:black; font-size:10px; margin:0; margin-right:5px;" onclick="editMaterial('${m.id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn" style="width:auto; padding:3px 8px; background:#dc3545; font-size:10px; margin:0;" onclick="deleteMaterial('${m.id}')"><i class="fas fa-trash"></i></button>
+            `;
+        }
+        
+        html += `<div id="mat-card-${m.id}" class="q-card" style="border:1px solid var(--border-color); margin-bottom:10px;"> 
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;"> 
+                        <h4 style="margin:0; color:var(--primary-btn); flex:1;">${m.title}</h4> 
+                        <div style="display:flex;">${actionBtns}</div> 
+                    </div> 
+                    <p style="white-space: pre-wrap; font-size:13px; color:var(--text-color); margin:0; line-height: 1.5;">${m.content}</p> 
+                 </div>`; 
+    }); 
+    return html; 
+}
 function deleteMaterial(id) { if(confirm("Delete this note permanently?")) { db.collection('rooms').doc(currentRoomId).collection('materials').doc(id).delete().then(() => { alert("Deleted!"); loadMaterials(); }); } }
 
 // ---------------------------------
 // 🌟 MOCK TEST ENGINE & REVIEW
 // ---------------------------------
-let mockTestQuestions = [];
-let mockCurrentIndex = 0;
-let mockUserAnswers = {}; 
-let mockTimer = null;
-let mockTimeLeft = 0;
-let currentMockTopics = [];
-let reviewSourceType = 'test'; 
-
+let mockTestQuestions = []; let mockCurrentIndex = 0; let mockUserAnswers = {}; let mockTimer = null; let mockTimeLeft = 0; let currentMockTopics = []; let reviewSourceType = 'test'; 
 function openMockSetupModal() { document.getElementById('mockSetupModal').style.display = 'flex'; document.getElementById('mockTimerToggle').checked = false; const container = document.getElementById('mockTopicContainer'); let topics = [...new Set(allCurrentQuestions.map(q => q.topic))]; if(topics.length === 0) { container.innerHTML = '<p style="font-size:12px; color:red;">No topics available.</p>'; return; } let html = `<label style="font-size:13px; display:block; margin-bottom:8px; font-weight:bold; border-bottom:1px solid var(--border-color); padding-bottom:5px;"> <input type="checkbox" id="selectAllTopics" checked onchange="toggleSelectAllTopics(this)" style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> Select All </label>`; topics.forEach(t => { html += `<label style="display:block; margin:5px 0; font-size:13px;"> <input type="checkbox" class="topic-chk" value="${t}" checked style="transform:scale(1.2); margin-right:5px; accent-color:#6f42c1;"> ${t} </label>`; }); container.innerHTML = html; }
 function closeMockSetupModal(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockSetupModal').style.display = 'none'; }
 function toggleSelectAllTopics(master) { document.querySelectorAll('.topic-chk').forEach(c => c.checked = master.checked); }
@@ -174,93 +249,25 @@ function submitMockTestEarly() {
     let finalScore = (correct * 1) - (wrong * 0.25); if(finalScore < 0) finalScore = 0; let accuracy = (correct + wrong) > 0 ? Math.round((correct / (correct + wrong)) * 100) : 0;
     document.getElementById('reportFinalScore').innerText = finalScore.toFixed(2); document.getElementById('reportCorrect').innerText = correct; document.getElementById('reportWrong').innerText = wrong; document.getElementById('reportUnattempted').innerText = unattempted; document.getElementById('reportAccuracy').innerText = accuracy + "%";
     
-    // Save Qs & Ans in History for later review
-    let resultObj = { 
-        date: new Date().toLocaleString(), 
-        room: currentRoomName || "Unknown", 
-        topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '), 
-        totalQ: mockTestQuestions.length, 
-        attempted: correct + wrong, 
-        correct: correct, wrong: wrong, score: finalScore.toFixed(2), accuracy: accuracy,
-        questions: mockTestQuestions, userAnswers: mockUserAnswers 
-    };
+    let resultObj = { date: new Date().toLocaleString(), room: currentRoomName || "Unknown", topics: currentMockTopics.length > 2 ? currentMockTopics.slice(0,2).join(', ') + "..." : currentMockTopics.join(', '), totalQ: mockTestQuestions.length, attempted: correct + wrong, correct: correct, wrong: wrong, score: finalScore.toFixed(2), accuracy: accuracy, questions: mockTestQuestions, userAnswers: mockUserAnswers };
     let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; history.push(resultObj); localStorage.setItem('studyRoomMockHistory', JSON.stringify(history));
-    
-    updateLeaderboardScore(finalScore); 
-    document.getElementById('mockReportModal').style.display = 'flex';
+    updateLeaderboardScore(finalScore); document.getElementById('mockReportModal').style.display = 'flex';
 }
 function closeMockReport(e) { if(e && e.target.classList.contains('profile-menu-sheet')) return; document.getElementById('mockReportModal').style.display = 'none'; window.location.hash = '#room'; handleHashChange(); }
 
-// 🌟 REVIEW ANSWERS LOGIC
 function openMockReview(source = 'test', histIndex = null) {
-    reviewSourceType = source;
-    document.getElementById('mockReviewScreen').style.display = 'flex';
-    const container = document.getElementById('mockReviewContainer');
-    let html = '';
-
-    let qList = mockTestQuestions;
-    let uAnsList = mockUserAnswers;
-
-    if(source === 'history') {
-        let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || [];
-        let item = history[histIndex];
-        if(!item || !item.questions) { container.innerHTML = '<p style="padding:20px;">Review not available for this old test.</p>'; return; }
-        qList = item.questions;
-        uAnsList = item.userAnswers;
-    }
-
+    reviewSourceType = source; document.getElementById('mockReviewScreen').style.display = 'flex'; const container = document.getElementById('mockReviewContainer'); let html = ''; let qList = mockTestQuestions; let uAnsList = mockUserAnswers;
+    if(source === 'history') { let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; let item = history[histIndex]; if(!item || !item.questions) { container.innerHTML = '<p style="padding:20px;">Review not available for this old test.</p>'; return; } qList = item.questions; uAnsList = item.userAnswers; }
     qList.forEach((q, index) => {
-        let uAns = uAnsList[q.id];
-        let isCorrect = uAns === q.correct;
-        let statusText = !uAns ? '<span style="color:#6c757d;">⚪ Skipped</span>' : (isCorrect ? '<span style="color:#28a745;">✅ Correct</span>' : '<span style="color:#dc3545;">❌ Wrong</span>');
-
-        html += `<div class="q-card" style="border:1px solid var(--border-color); margin-bottom:15px; background:var(--card-bg);">
-                    <p style="font-weight:bold; margin-top:0;">Q${index + 1}. ${q.question}</p>
-                    <p style="font-size:12px; margin-bottom:10px;">${statusText}</p>
-                    <div style="display:flex; flex-direction:column; gap:5px;">`;
-
-        q.shuffledOptions.forEach(opt => {
-            let bg = "var(--bg-color)", border = "1px solid var(--border-color)", color = "var(--text-color)";
-            if (opt.id === q.correct) { bg = "#d4edda"; border = "1px solid #28a745"; color = "#155724"; } 
-            else if (uAns === opt.id && !isCorrect) { bg = "#f8d7da"; border = "1px solid #dc3545"; color = "#721c24"; }
-            html += `<div style="padding:10px; border-radius:6px; background:${bg}; border:${border}; color:${color}; font-size:14px;">${opt.text}</div>`;
-        });
+        let uAns = uAnsList[q.id]; let isCorrect = uAns === q.correct; let statusText = !uAns ? '<span style="color:#6c757d;">⚪ Skipped</span>' : (isCorrect ? '<span style="color:#28a745;">✅ Correct</span>' : '<span style="color:#dc3545;">❌ Wrong</span>');
+        html += `<div class="q-card" style="border:1px solid var(--border-color); margin-bottom:15px; background:var(--card-bg);"><p style="font-weight:bold; margin-top:0;">Q${index + 1}. ${q.question}</p><p style="font-size:12px; margin-bottom:10px;">${statusText}</p><div style="display:flex; flex-direction:column; gap:5px;">`;
+        q.shuffledOptions.forEach(opt => { let bg = "var(--bg-color)", border = "1px solid var(--border-color)", color = "var(--text-color)"; if (opt.id === q.correct) { bg = "#d4edda"; border = "1px solid #28a745"; color = "#155724"; } else if (uAns === opt.id && !isCorrect) { bg = "#f8d7da"; border = "1px solid #dc3545"; color = "#721c24"; } html += `<div style="padding:10px; border-radius:6px; background:${bg}; border:${border}; color:${color}; font-size:14px;">${opt.text}</div>`; });
         html += `</div></div>`;
-    });
-    container.innerHTML = html;
+    }); container.innerHTML = html;
 }
 function closeMockReview() { document.getElementById('mockReviewScreen').style.display = 'none'; }
-
-
 function openMockHistoryScreen() { closeProfileMenuModal(); window.location.hash = '#mockhistory'; }
-function renderMockHistory() { 
-    const c = document.getElementById('mockHistoryListContainer'); 
-    let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; 
-    if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; } 
-    
-    let html = ''; 
-    for(let i = history.length - 1; i >= 0; i--) {
-        let h = history[i];
-        let revBtn = h.questions ? `<button class="btn" style="width:auto; padding:5px 12px; margin:0; background:#17a2b8; font-size:11px;" onclick="openMockReview('history', ${i})">🔍 Review</button>` : '';
-
-        html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);"> 
-                  <div style="display:flex; justify-content:space-between; margin-bottom:5px;"> 
-                     <b style="color:#6f42c1; font-size:14px;">${h.room}</b> 
-                     <span style="font-size:10px; color:#888;">${h.date}</span> 
-                  </div> 
-                  <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p> 
-                  <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;"> 
-                     <span style="color:#28a745;">Score: ${h.score}</span> 
-                     <span style="color:#007bff;">Acc: ${h.accuracy}%</span> 
-                  </div> 
-                  <div style="font-size:11px; display:flex; justify-content:space-between; align-items:center; color:#555;"> 
-                     <div><span>Total: ${h.totalQ}</span> | <span>✅ ${h.correct}</span> | <span>❌ ${h.wrong}</span></div>
-                     ${revBtn}
-                  </div> 
-                 </div>`; 
-    }
-    c.innerHTML = html; 
-}
+function renderMockHistory() { const c = document.getElementById('mockHistoryListContainer'); let history = JSON.parse(localStorage.getItem('studyRoomMockHistory')) || []; if(history.length === 0) { c.innerHTML = '<p style="color:var(--text-color);">No mock test history found. Go take a test!</p>'; return; } let html = ''; for(let i = history.length - 1; i >= 0; i--) { let h = history[i]; let revBtn = h.questions ? `<button class="btn" style="width:auto; padding:5px 12px; margin:0; background:#17a2b8; font-size:11px;" onclick="openMockReview('history', ${i})">🔍 Review</button>` : ''; html += `<div class="q-card" style="border-left: 5px solid #6f42c1; margin-bottom:15px; background:var(--bg-color);"> <div style="display:flex; justify-content:space-between; margin-bottom:5px;"> <b style="color:#6f42c1; font-size:14px;">${h.room}</b> <span style="font-size:10px; color:#888;">${h.date}</span> </div> <p style="font-size:11px; color:var(--text-color); margin-bottom:10px;"><b>Topics:</b> ${h.topics}</p> <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:10px;"> <span style="color:#28a745;">Score: ${h.score}</span> <span style="color:#007bff;">Acc: ${h.accuracy}%</span> </div> <div style="font-size:11px; display:flex; justify-content:space-between; align-items:center; color:#555;"> <div><span>Total: ${h.totalQ}</span> | <span>✅ ${h.correct}</span> | <span>❌ ${h.wrong}</span></div> ${revBtn} </div> </div>`; } c.innerHTML = html; }
 
 // ---------------------------------
 // 🌟 PRACTICE FEED & SOLVED ARCHIVE
@@ -363,7 +370,7 @@ function loadMyRooms() {
             html += `<div class="q-card" style="display:flex; justify-content:space-between; align-items:center;"><div><b style="font-size:16px;">${doc.data().roomName}</b><br>${p}</div><button class="btn" style="width:auto; padding:6px 12px; margin:0;" onclick="enterRoom('${doc.id}', '${doc.data().roomName}')">Enter</button></div>`; 
         }); 
         c.innerHTML = html; 
-    }).catch(err => { c.innerHTML = '<p style="color:red; font-size:13px;">Error loading rooms. Please refresh.</p>'; }); 
+    }).catch(err => { c.innerHTML = '<p style="color:red; font-size:13px;">Error loading rooms.</p>'; }); 
 }
 
 function enterRoom(id, name) { currentRoomId = id; currentRoomName = name; document.getElementById('roomTitleText').innerText = name; document.getElementById('searchQuestion').value = ''; closeRoomMenuModal(); closeAddMcqChoiceModal(); clearSelection(); openAuthorFolders = []; openTopicFolders = []; db.collection('rooms').doc(id).get().then(doc => { if(doc.exists) { currentRoomCreator = doc.data().creatorId; currentRoomAdmins = doc.data().admins || [currentRoomCreator]; currentRoomAdminOnlyMCQ = doc.data().adminOnlyMCQ || false; currentRoomIsPublic = doc.data().isPublic || false; const im = currentRoomAdmins.includes(auth.currentUser.uid); let eb = document.getElementById('editRoomMenuBtn'); if(eb) eb.style.display = im ? 'block' : 'none'; let dbBtn = document.getElementById('deleteRoomMenuBtn'); if(dbBtn) dbBtn.style.display = (auth.currentUser.uid === currentRoomCreator) ? 'block' : 'none'; let ab = document.getElementById('addMcqMainBtn'); if(ab) ab.style.display = (currentRoomAdminOnlyMCQ && !im) ? 'none' : 'block'; loadRoomMembers(); loadRoomQuestions(); window.location.hash = '#room'; } }); }
